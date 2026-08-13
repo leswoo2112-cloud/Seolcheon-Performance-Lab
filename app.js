@@ -1,25 +1,28 @@
-/* ============================================================
+/* =========================================================
    SEOLCHEON SPORTS PERFORMANCE LAB
    APP.JS
-   PART 1 / 2
+   FILE 3 / 6
 
-   CORE CONTROLLER
-   - App State
-   - Storage
+   CORE APPLICATION
+   ---------------------------------------------------------
+   - Login / Logout
    - Navigation
-   - Sidebar
+   - Athlete CRUD
    - Athlete Selection
    - Dashboard
-   - Analysis Mode
-   - Global Events
-============================================================ */
+   - Analysis Records
+   - Reports Storage
+   - LocalStorage
+   - Backup / Restore
+   - Shared Application State
+========================================================= */
 
 "use strict";
 
 
-/* ============================================================
-   01. APP CONFIG
-============================================================ */
+/* =========================================================
+   01. CONFIG
+========================================================= */
 
 const APP_CONFIG = {
 
@@ -27,53 +30,425 @@ const APP_CONFIG = {
     "설천고 스포츠 퍼포먼스 분석 시스템",
 
   version:
-    "2.0.0",
+    "3.0.0",
 
-  school:
-    "설천고",
+  login: {
+
+    id:
+      "seolcheon",
+
+    password:
+      "sports"
+
+  },
 
   storage: {
 
     athletes:
-      "seolcheon_athletes_v2",
+      "seolcheon_athletes_v3",
 
     analyses:
-      "seolcheon_analyses_v2",
+      "seolcheon_analyses_v3",
 
     reports:
-      "seolcheon_reports_v2",
-
-    settings:
-      "seolcheon_settings_v2",
+      "seolcheon_reports_v3",
 
     selectedAthlete:
-      "seolcheon_selected_athlete_v2"
+      "seolcheon_selected_athlete_v3",
+
+    settings:
+      "seolcheon_settings_v3"
 
   }
 
 };
 
 
-/* ============================================================
-   02. GLOBAL STATE
-============================================================ */
+
+/* =========================================================
+   02. SPORT DATABASE
+========================================================= */
+
+const SPORTS_DATABASE = {
+
+  winter: [
+
+    {
+      id: "biathlon",
+      name: "바이애슬론",
+      icon: "🎯",
+      description:
+        "스키 주법 · 경사 · 구간 · 자세 · 움직임 분석"
+    },
+
+    {
+      id: "crossCountry",
+      name: "크로스컨트리",
+      icon: "⛷",
+      description:
+        "스케이팅 · 클래식 · 폴링 · 글라이드 분석"
+    },
+
+    {
+      id: "rollerSki",
+      name: "롤러스키",
+      icon: "🛼",
+      description:
+        "롤러스키 주법 · 밸런스 · 폴링 · 추진 분석"
+    },
+
+    {
+      id: "alpineSki",
+      name: "알파인스키",
+      icon: "⛷",
+      description:
+        "턴 · 중심이동 · 엣지 · 자세 분석"
+    },
+
+    {
+      id: "snowboard",
+      name: "스노보드",
+      icon: "🏂",
+      description:
+        "밸런스 · 회전 · 중심 이동 분석"
+    },
+
+    {
+      id: "speedSkating",
+      name: "스피드스케이팅",
+      icon: "⛸",
+      description:
+        "푸시 · 활주 · 무릎각 · 자세 분석"
+    },
+
+    {
+      id: "shortTrack",
+      name: "쇼트트랙",
+      icon: "⛸",
+      description:
+        "코너링 · 중심 · 푸시 분석"
+    },
+
+    {
+      id: "figureSkating",
+      name: "피겨스케이팅",
+      icon: "⛸",
+      description:
+        "점프 · 회전 · 착지 · 균형 분석"
+    },
+
+    {
+      id: "skiJumping",
+      name: "스키점프",
+      icon: "🎿",
+      description:
+        "도약 · 비행 자세 · 착지 분석"
+    },
+
+    {
+      id: "skeleton",
+      name: "스켈레톤",
+      icon: "🛷",
+      description:
+        "스타트 · 추진 · 탑승 자세 분석"
+    },
+
+    {
+      id: "bobsleigh",
+      name: "봅슬레이",
+      icon: "🛷",
+      description:
+        "스타트 · 가속 · 추진 자세 분석"
+    },
+
+    {
+      id: "luge",
+      name: "루지",
+      icon: "🛷",
+      description:
+        "스타트 · 탑승 자세 · 균형 분석"
+    },
+
+    {
+      id: "curling",
+      name: "컬링",
+      icon: "🥌",
+      description:
+        "딜리버리 · 슬라이드 · 균형 분석"
+    }
+
+  ],
+
+
+  summer: [
+
+    {
+      id: "sprint",
+      name: "육상 단거리",
+      icon: "🏃",
+      description:
+        "스타트 · 가속 · 보폭 · 케이던스 분석"
+    },
+
+    {
+      id: "middleDistance",
+      name: "육상 중거리",
+      icon: "🏃",
+      description:
+        "러닝 효율 · 보폭 · 접지시간 분석"
+    },
+
+    {
+      id: "longDistance",
+      name: "육상 장거리",
+      icon: "🏃",
+      description:
+        "러닝 경제성 · 케이던스 · 자세 분석"
+    },
+
+    {
+      id: "hurdles",
+      name: "허들",
+      icon: "🏃",
+      description:
+        "허들 통과 · 리드레그 · 착지 분석"
+    },
+
+    {
+      id: "raceWalking",
+      name: "경보",
+      icon: "🚶",
+      description:
+        "보행 주기 · 골반 · 접지 분석"
+    },
+
+    {
+      id: "longJump",
+      name: "멀리뛰기",
+      icon: "🏃",
+      description:
+        "도움닫기 · 도약 · 착지 분석"
+    },
+
+    {
+      id: "tripleJump",
+      name: "세단뛰기",
+      icon: "🏃",
+      description:
+        "홉 · 스텝 · 점프 분석"
+    },
+
+    {
+      id: "highJump",
+      name: "높이뛰기",
+      icon: "🏃",
+      description:
+        "도움닫기 · 도약 · 공중 자세 분석"
+    },
+
+    {
+      id: "poleVault",
+      name: "장대높이뛰기",
+      icon: "🏃",
+      description:
+        "도움닫기 · 장대 삽입 · 도약 분석"
+    },
+
+    {
+      id: "shotPut",
+      name: "포환던지기",
+      icon: "🥇",
+      description:
+        "회전 · 파워 전달 · 릴리스 분석"
+    },
+
+    {
+      id: "discus",
+      name: "원반던지기",
+      icon: "🥏",
+      description:
+        "회전 · 중심 이동 · 릴리스 분석"
+    },
+
+    {
+      id: "javelin",
+      name: "창던지기",
+      icon: "🥇",
+      description:
+        "도움닫기 · 블록 · 릴리스 분석"
+    },
+
+    {
+      id: "hammerThrow",
+      name: "해머던지기",
+      icon: "🥇",
+      description:
+        "회전 · 중심 · 릴리스 분석"
+    },
+
+    {
+      id: "weightlifting",
+      name: "역도",
+      icon: "🏋️",
+      description:
+        "바벨 궤적 · 풀 · 캐치 · 속도 분석"
+    },
+
+    {
+      id: "swimming",
+      name: "수영",
+      icon: "🏊",
+      description:
+        "스트로크 · 킥 · 몸통 회전 분석"
+    },
+
+    {
+      id: "cycling",
+      name: "사이클",
+      icon: "🚴",
+      description:
+        "페달링 · 무릎각 · 상체 안정성 분석"
+    },
+
+    {
+      id: "rowing",
+      name: "조정",
+      icon: "🚣",
+      description:
+        "드라이브 · 리커버리 · 스트로크 분석"
+    },
+
+    {
+      id: "football",
+      name: "축구",
+      icon: "⚽",
+      description:
+        "달리기 · 킥 · 방향전환 분석"
+    },
+
+    {
+      id: "basketball",
+      name: "농구",
+      icon: "🏀",
+      description:
+        "점프 · 슈팅 · 착지 · 방향전환 분석"
+    },
+
+    {
+      id: "volleyball",
+      name: "배구",
+      icon: "🏐",
+      description:
+        "점프 · 스파이크 · 블로킹 분석"
+    },
+
+    {
+      id: "handball",
+      name: "핸드볼",
+      icon: "🤾",
+      description:
+        "점프 · 스로잉 · 착지 분석"
+    },
+
+    {
+      id: "baseball",
+      name: "야구",
+      icon: "⚾",
+      description:
+        "투구 · 타격 · 회전 분석"
+    },
+
+    {
+      id: "tennis",
+      name: "테니스",
+      icon: "🎾",
+      description:
+        "서브 · 포핸드 · 백핸드 분석"
+    },
+
+    {
+      id: "badminton",
+      name: "배드민턴",
+      icon: "🏸",
+      description:
+        "스매시 · 런지 · 풋워크 분석"
+    },
+
+    {
+      id: "tableTennis",
+      name: "탁구",
+      icon: "🏓",
+      description:
+        "스윙 · 회전 · 풋워크 분석"
+    },
+
+    {
+      id: "taekwondo",
+      name: "태권도",
+      icon: "🥋",
+      description:
+        "킥 · 회전 · 균형 분석"
+    },
+
+    {
+      id: "judo",
+      name: "유도",
+      icon: "🥋",
+      description:
+        "중심 이동 · 회전 · 균형 분석"
+    },
+
+    {
+      id: "wrestling",
+      name: "레슬링",
+      icon: "🤼",
+      description:
+        "자세 · 중심 · 움직임 분석"
+    },
+
+    {
+      id: "boxing",
+      name: "복싱",
+      icon: "🥊",
+      description:
+        "펀치 · 회전 · 풋워크 분석"
+    },
+
+    {
+      id: "fencing",
+      name: "펜싱",
+      icon: "🤺",
+      description:
+        "런지 · 중심 이동 · 반응 분석"
+    },
+
+    {
+      id: "gymnastics",
+      name: "체조",
+      icon: "🤸",
+      description:
+        "회전 · 점프 · 착지 · 균형 분석"
+    },
+
+    {
+      id: "shooting",
+      name: "사격",
+      icon: "🎯",
+      description:
+        "자세 안정성 · 흔들림 · 균형 · 호흡 타이밍 분석"
+    }
+
+  ]
+
+};
+
+
+
+/* =========================================================
+   03. APP STATE
+========================================================= */
 
 const AppState = {
-
-  currentPage:
-    "dashboard",
-
-  selectedAthlete:
-    null,
-
-  selectedSport:
-    null,
-
-  selectedSeason:
-    null,
-
-  analysisMode:
-    "video",
 
   athletes:
     [],
@@ -84,349 +459,151 @@ const AppState = {
   reports:
     [],
 
-  initialized:
-    false
+  selectedAthleteId:
+    null,
+
+  selectedSportId:
+    null,
+
+  selectedSeason:
+    null,
+
+  currentPage:
+    "dashboard",
+
+  editingAthleteId:
+    null
 
 };
 
 
-/* ============================================================
-   03. STORAGE
-============================================================ */
+window.SeolcheonState =
+  AppState;
 
-const StorageManager = {
+window.SeolcheonSports =
+  SPORTS_DATABASE;
 
 
-  read(key, fallback = []) {
 
-    try {
+/* =========================================================
+   04. STORAGE
+========================================================= */
 
-      const value =
-        localStorage.getItem(key);
+function readStorage(
+  key,
+  fallback = []
+) {
 
-      if (!value) {
+  try {
 
-        return fallback;
-
-      }
-
-      return JSON.parse(value);
-
-    }
-
-    catch (error) {
-
-      console.error(
-        "[STORAGE READ ERROR]",
-        key,
-        error
+    const raw =
+      localStorage.getItem(
+        key
       );
+
+
+    if (!raw) {
 
       return fallback;
 
     }
 
-  },
 
-
-  write(key, value) {
-
-    try {
-
-      localStorage.setItem(
-        key,
-        JSON.stringify(value)
-      );
-
-      return true;
-
-    }
-
-    catch (error) {
-
-      console.error(
-        "[STORAGE WRITE ERROR]",
-        key,
-        error
-      );
-
-      return false;
-
-    }
-
-  },
-
-
-  remove(key) {
-
-    try {
-
-      localStorage.removeItem(key);
-
-      return true;
-
-    }
-
-    catch (error) {
-
-      console.error(
-        "[STORAGE REMOVE ERROR]",
-        key,
-        error
-      );
-
-      return false;
-
-    }
+    return JSON.parse(
+      raw
+    );
 
   }
 
-};
+  catch (error) {
 
-
-/* ============================================================
-   04. UTILITIES
-============================================================ */
-
-const Utils = {
-
-
-  uid(prefix = "item") {
-
-    return (
-      prefix +
-      "_" +
-      Date.now() +
-      "_" +
-      Math.random()
-        .toString(36)
-        .slice(2, 9)
-    );
-
-  },
-
-
-  clamp(
-    value,
-    min = 0,
-    max = 100
-  ) {
-
-    const number =
-      Number(value);
-
-    if (
-      Number.isNaN(number)
-    ) {
-
-      return min;
-
-    }
-
-    return Math.min(
-      max,
-      Math.max(
-        min,
-        number
-      )
-    );
-
-  },
-
-
-  average(values = []) {
-
-    const numbers =
-      values
-        .map(Number)
-        .filter(
-          value =>
-            Number.isFinite(value)
-        );
-
-    if (!numbers.length) {
-
-      return 0;
-
-    }
-
-    return (
-      numbers.reduce(
-        (sum, value) =>
-          sum + value,
-        0
-      ) /
-      numbers.length
-    );
-
-  },
-
-
-  formatDate(value) {
-
-    if (!value) {
-
-      return "-";
-
-    }
-
-    const date =
-      new Date(value);
-
-    if (
-      Number.isNaN(
-        date.getTime()
-      )
-    ) {
-
-      return "-";
-
-    }
-
-    return new Intl.DateTimeFormat(
-      "ko-KR",
-      {
-        year:
-          "numeric",
-
-        month:
-          "2-digit",
-
-        day:
-          "2-digit",
-
-        hour:
-          "2-digit",
-
-        minute:
-          "2-digit"
-      }
-    ).format(date);
-
-  },
-
-
-  formatDuration(seconds = 0) {
-
-    const safe =
-      Math.max(
-        0,
-        Number(seconds) || 0
-      );
-
-    const minutes =
-      Math.floor(
-        safe / 60
-      );
-
-    const secs =
-      Math.floor(
-        safe % 60
-      );
-
-    const centiseconds =
-      Math.floor(
-        (safe % 1) * 100
-      );
-
-    return (
-      String(minutes)
-        .padStart(2, "0") +
-      ":" +
-      String(secs)
-        .padStart(2, "0") +
-      "." +
-      String(centiseconds)
-        .padStart(2, "0")
-    );
-
-  },
-
-
-  escapeHTML(value = "") {
-
-    return String(value)
-      .replace(
-        /&/g,
-        "&amp;"
-      )
-      .replace(
-        /</g,
-        "&lt;"
-      )
-      .replace(
-        />/g,
-        "&gt;"
-      )
-      .replace(
-        /"/g,
-        "&quot;"
-      )
-      .replace(
-        /'/g,
-        "&#039;"
-      );
-
-  }
-
-};
-
-
-/* ============================================================
-   05. LOAD APP DATA
-============================================================ */
-
-function loadAppData() {
-
-  AppState.athletes =
-    StorageManager.read(
-      APP_CONFIG.storage.athletes,
-      []
+    console.error(
+      "Storage read error:",
+      key,
+      error
     );
 
 
-  AppState.analyses =
-    StorageManager.read(
-      APP_CONFIG.storage.analyses,
-      []
-    );
-
-
-  AppState.reports =
-    StorageManager.read(
-      APP_CONFIG.storage.reports,
-      []
-    );
-
-
-  const selectedId =
-    StorageManager.read(
-      APP_CONFIG.storage.selectedAthlete,
-      null
-    );
-
-
-  if (selectedId) {
-
-    AppState.selectedAthlete =
-      AppState.athletes.find(
-        athlete =>
-          athlete.id ===
-          selectedId
-      ) || null;
+    return fallback;
 
   }
 
 }
 
 
-/* ============================================================
-   06. SAVE COLLECTIONS
-============================================================ */
+
+function writeStorage(
+  key,
+  value
+) {
+
+  try {
+
+    localStorage.setItem(
+      key,
+      JSON.stringify(
+        value
+      )
+    );
+
+
+    return true;
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "Storage write error:",
+      key,
+      error
+    );
+
+
+    return false;
+
+  }
+
+}
+
+
+
+function loadApplicationData() {
+
+  AppState.athletes =
+    readStorage(
+      APP_CONFIG.storage.athletes,
+      []
+    );
+
+
+  AppState.analyses =
+    readStorage(
+      APP_CONFIG.storage.analyses,
+      []
+    );
+
+
+  AppState.reports =
+    readStorage(
+      APP_CONFIG.storage.reports,
+      []
+    );
+
+
+  AppState.selectedAthleteId =
+    localStorage.getItem(
+      APP_CONFIG.storage.selectedAthlete
+    ) ||
+    null;
+
+}
+
+
 
 function saveAthletes() {
 
-  StorageManager.write(
+  writeStorage(
     APP_CONFIG.storage.athletes,
     AppState.athletes
   );
@@ -434,9 +611,10 @@ function saveAthletes() {
 }
 
 
+
 function saveAnalyses() {
 
-  StorageManager.write(
+  writeStorage(
     APP_CONFIG.storage.analyses,
     AppState.analyses
   );
@@ -444,9 +622,10 @@ function saveAnalyses() {
 }
 
 
+
 function saveReports() {
 
-  StorageManager.write(
+  writeStorage(
     APP_CONFIG.storage.reports,
     AppState.reports
   );
@@ -454,9 +633,384 @@ function saveReports() {
 }
 
 
-/* ============================================================
-   07. PAGE NAVIGATION
-============================================================ */
+
+/* =========================================================
+   05. HELPERS
+========================================================= */
+
+function createId(
+  prefix = "item"
+) {
+
+  return (
+    prefix +
+    "_" +
+    Date.now() +
+    "_" +
+    Math.random()
+      .toString(36)
+      .slice(2, 9)
+  );
+
+}
+
+
+
+function escapeHTML(
+  value
+) {
+
+  return String(
+    value ?? ""
+  )
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
+
+}
+
+
+
+function clamp(
+  value,
+  min,
+  max
+) {
+
+  return Math.min(
+    Math.max(
+      value,
+      min
+    ),
+    max
+  );
+
+}
+
+
+
+function average(
+  values
+) {
+
+  const valid =
+    values.filter(
+      value =>
+        Number.isFinite(
+          Number(value)
+        )
+    );
+
+
+  if (
+    valid.length === 0
+  ) {
+
+    return null;
+
+  }
+
+
+  return (
+    valid.reduce(
+      (sum, value) =>
+        sum + Number(value),
+      0
+    ) /
+    valid.length
+  );
+
+}
+
+
+
+function formatDate(
+  value
+) {
+
+  if (!value) {
+
+    return "-";
+
+  }
+
+
+  const date =
+    new Date(
+      value
+    );
+
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+
+    return value;
+
+  }
+
+
+  return date.toLocaleString(
+    "ko-KR",
+    {
+
+      year:
+        "numeric",
+
+      month:
+        "2-digit",
+
+      day:
+        "2-digit",
+
+      hour:
+        "2-digit",
+
+      minute:
+        "2-digit"
+
+    }
+  );
+
+}
+
+
+
+function getSportById(
+  sportId
+) {
+
+  const allSports = [
+
+    ...SPORTS_DATABASE.winter,
+
+    ...SPORTS_DATABASE.summer
+
+  ];
+
+
+  return (
+    allSports.find(
+      sport =>
+        sport.id === sportId
+    ) ||
+    null
+  );
+
+}
+
+
+
+function getSelectedAthlete() {
+
+  return (
+    AppState.athletes.find(
+      athlete =>
+        athlete.id ===
+        AppState.selectedAthleteId
+    ) ||
+    null
+  );
+
+}
+
+
+
+function getAthleteById(
+  athleteId
+) {
+
+  return (
+    AppState.athletes.find(
+      athlete =>
+        athlete.id ===
+        athleteId
+    ) ||
+    null
+  );
+
+}
+
+
+
+/* =========================================================
+   06. LOGIN
+========================================================= */
+
+const loginScreen =
+  document.getElementById(
+    "loginScreen"
+  );
+
+
+const appShell =
+  document.getElementById(
+    "app"
+  );
+
+
+const loginForm =
+  document.getElementById(
+    "loginForm"
+  );
+
+
+function openApplication() {
+
+  if (loginScreen) {
+
+    loginScreen.hidden =
+      true;
+
+  }
+
+
+  if (appShell) {
+
+    appShell.hidden =
+      false;
+
+  }
+
+
+  sessionStorage.setItem(
+    "seolcheon_login",
+    "true"
+  );
+
+
+  navigateTo(
+    "dashboard"
+  );
+
+}
+
+
+
+function logoutApplication() {
+
+  sessionStorage.removeItem(
+    "seolcheon_login"
+  );
+
+
+  if (appShell) {
+
+    appShell.hidden =
+      true;
+
+  }
+
+
+  if (loginScreen) {
+
+    loginScreen.hidden =
+      false;
+
+  }
+
+}
+
+
+
+loginForm?.addEventListener(
+  "submit",
+  event => {
+
+    event.preventDefault();
+
+
+    const id =
+      document
+        .getElementById(
+          "loginId"
+        )
+        ?.value
+        .trim();
+
+
+    const password =
+      document
+        .getElementById(
+          "loginPassword"
+        )
+        ?.value;
+
+
+    const message =
+      document.getElementById(
+        "loginMessage"
+      );
+
+
+    if (
+      id ===
+        APP_CONFIG.login.id &&
+      password ===
+        APP_CONFIG.login.password
+    ) {
+
+      if (message) {
+
+        message.textContent =
+          "";
+
+      }
+
+
+      openApplication();
+
+    }
+
+    else {
+
+      if (message) {
+
+        message.textContent =
+          "아이디 또는 비밀번호를 확인해주세요.";
+
+      }
+
+    }
+
+  }
+);
+
+
+
+document
+  .getElementById(
+    "logoutButton"
+  )
+  ?.addEventListener(
+    "click",
+    logoutApplication
+  );
+
+
+
+/* =========================================================
+   07. NAVIGATION
+========================================================= */
 
 const PAGE_TITLES = {
 
@@ -478,6 +1032,9 @@ const PAGE_TITLES = {
   records:
     "ANALYSIS RECORDS",
 
+  training:
+    "TRAINING CENTER",
+
   report:
     "PERFORMANCE REPORT",
 
@@ -487,78 +1044,55 @@ const PAGE_TITLES = {
 };
 
 
+
 function navigateTo(
-  pageName,
-  options = {}
+  pageName
 ) {
 
-  const pages =
-    document.querySelectorAll(
+  AppState.currentPage =
+    pageName;
+
+
+  document
+    .querySelectorAll(
       "[data-page]"
+    )
+    .forEach(
+      page => {
+
+        const active =
+          page.dataset.page ===
+          pageName;
+
+
+        page.hidden =
+          !active;
+
+
+        page.classList.toggle(
+          "active",
+          active
+        );
+
+      }
     );
-
-
-  let pageExists =
-    false;
-
-
-  pages.forEach(page => {
-
-    const active =
-      page.dataset.page ===
-      pageName;
-
-
-    if (active) {
-
-      pageExists =
-        true;
-
-    }
-
-
-    page.hidden =
-      !active;
-
-
-    page.classList.toggle(
-      "active",
-      active
-    );
-
-  });
-
-
-  if (!pageExists) {
-
-    console.warn(
-      "[NAVIGATION]",
-      "Page not found:",
-      pageName
-    );
-
-    return;
-
-  }
 
 
   document
     .querySelectorAll(
       "[data-nav]"
     )
-    .forEach(button => {
+    .forEach(
+      button => {
 
-      button.classList.toggle(
-        "active",
-        button.dataset.nav ===
+        button.classList.toggle(
+          "active",
+          button.dataset.nav ===
           pageName
-      );
+        );
 
-    });
-
-
-  AppState.currentPage =
-    pageName;
+      }
+    );
 
 
   const title =
@@ -570,579 +1104,305 @@ function navigateTo(
   if (title) {
 
     title.textContent =
-      PAGE_TITLES[pageName] ||
-      "SPORTS PERFORMANCE";
+      PAGE_TITLES[
+        pageName
+      ] ||
+      APP_CONFIG.name;
 
   }
 
 
-  closeMobileSidebar();
+  if (
+    pageName ===
+    "dashboard"
+  ) {
+
+    renderDashboard();
+
+  }
 
 
   if (
-    options.scrollTop !==
-    false
+    pageName ===
+    "athletes"
   ) {
 
-    window.scrollTo({
+    renderAthletes();
+
+  }
+
+
+  if (
+    pageName ===
+    "records"
+  ) {
+
+    renderRecords();
+
+  }
+
+
+  window.scrollTo(
+    {
       top:
         0,
 
       behavior:
         "smooth"
-    });
-
-  }
-
-
-  runPageRefresh(
-    pageName
-  );
-
-}
-
-
-/* ============================================================
-   08. PAGE REFRESH
-============================================================ */
-
-function runPageRefresh(
-  pageName
-) {
-
-  switch (pageName) {
-
-
-    case "dashboard":
-
-      refreshDashboard();
-
-      break;
-
-
-    case "athletes":
-
-      callModule(
-        "AthleteManager",
-        "render"
-      );
-
-      break;
-
-
-    case "winter":
-
-    case "summer":
-
-      callModule(
-        "SportsManager",
-        "render",
-        pageName
-      );
-
-      break;
-
-
-    case "analysis":
-
-      refreshAnalysisHeader();
-
-      callModule(
-        "MotionAnalysis",
-        "refresh"
-      );
-
-      break;
-
-
-    case "records":
-
-      callModule(
-        "RecordsManager",
-        "render"
-      );
-
-      break;
-
-
-    case "report":
-
-      callModule(
-        "ReportManager",
-        "renderCurrent"
-      );
-
-      break;
-
-
-    case "system":
-
-      callModule(
-        "SystemCheck",
-        "run"
-      );
-
-      break;
-
-  }
-
-}
-
-
-/* ============================================================
-   09. MODULE CALL HELPER
-============================================================ */
-
-function callModule(
-  moduleName,
-  methodName,
-  ...args
-) {
-
-  const module =
-    window[moduleName];
-
-
-  if (
-    !module ||
-    typeof module[methodName] !==
-      "function"
-  ) {
-
-    return null;
-
-  }
-
-
-  try {
-
-    return module[
-      methodName
-    ](...args);
-
-  }
-
-  catch (error) {
-
-    console.error(
-      `[${moduleName}.${methodName}]`,
-      error
-    );
-
-    return null;
-
-  }
-
-}
-
-
-/* ============================================================
-   10. NAVIGATION BUTTON EVENTS
-============================================================ */
-
-function initializeNavigation() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const navButton =
-        event.target.closest(
-          "[data-nav]"
-        );
-
-
-      if (!navButton) {
-
-        return;
-
-      }
-
-
-      navigateTo(
-        navButton.dataset.nav
-      );
-
     }
   );
 
 }
 
 
-/* ============================================================
-   11. MOBILE SIDEBAR
-============================================================ */
 
-function openMobileSidebar() {
+window.SeolcheonApp = {
 
-  const sidebar =
-    document.getElementById(
-      "sidebar"
-    );
+  navigate:
+    navigateTo,
 
+  getSelectedAthlete,
 
-  if (!sidebar) {
+  getAthleteById,
 
-    return;
+  getSportById,
+
+  createAnalysisRecord,
+
+  createReportRecord,
+
+  refresh() {
+
+    renderAll();
 
   }
 
-
-  sidebar.classList.add(
-    "open"
-  );
+};
 
 
-  document.body
-    .classList.add(
-      "no-scroll"
-    );
 
-}
+document.addEventListener(
+  "click",
+  event => {
 
-
-function closeMobileSidebar() {
-
-  const sidebar =
-    document.getElementById(
-      "sidebar"
-    );
+    const nav =
+      event.target.closest(
+        "[data-nav]"
+      );
 
 
-  sidebar?.classList.remove(
-    "open"
-  );
+    if (!nav) {
 
-
-  document.body
-    .classList.remove(
-      "no-scroll"
-    );
-
-}
-
-
-function initializeMobileSidebar() {
-
-  const button =
-    document.querySelector(
-      "[data-mobile-menu]"
-    );
-
-
-  button?.addEventListener(
-    "click",
-    () => {
-
-      const sidebar =
-        document.getElementById(
-          "sidebar"
-        );
-
-
-      if (!sidebar) {
-
-        return;
-
-      }
-
-
-      if (
-        sidebar.classList.contains(
-          "open"
-        )
-      ) {
-
-        closeMobileSidebar();
-
-      }
-
-      else {
-
-        openMobileSidebar();
-
-      }
+      return;
 
     }
-  );
 
 
-  document.addEventListener(
-    "click",
-    event => {
-
-      if (
-        window.innerWidth >
-        900
-      ) {
-
-        return;
-
-      }
-
-
-      const sidebar =
-        document.getElementById(
-          "sidebar"
-        );
-
-
-      if (
-        !sidebar ||
-        !sidebar.classList.contains(
-          "open"
-        )
-      ) {
-
-        return;
-
-      }
-
-
-      const insideSidebar =
-        event.target.closest(
-          "#sidebar"
-        );
-
-
-      const menuButton =
-        event.target.closest(
-          "[data-mobile-menu]"
-        );
-
-
-      if (
-        !insideSidebar &&
-        !menuButton
-      ) {
-
-        closeMobileSidebar();
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   12. SELECT ATHLETE
-============================================================ */
-
-function selectAthlete(
-  athleteOrId
-) {
-
-  let athlete =
-    null;
-
-
-  if (
-    typeof athleteOrId ===
-    "string"
-  ) {
-
-    athlete =
-      AppState.athletes.find(
-        item =>
-          item.id ===
-          athleteOrId
-      ) || null;
-
-  }
-
-  else {
-
-    athlete =
-      athleteOrId;
-
-  }
-
-
-  AppState.selectedAthlete =
-    athlete;
-
-
-  if (athlete) {
-
-    StorageManager.write(
-      APP_CONFIG.storage.selectedAthlete,
-      athlete.id
+    navigateTo(
+      nav.dataset.nav
     );
 
   }
-
-  else {
-
-    StorageManager.remove(
-      APP_CONFIG.storage.selectedAthlete
-    );
-
-  }
+);
 
 
-  refreshSelectedAthleteUI();
 
+/* =========================================================
+   08. SPORTS RENDER
+========================================================= */
 
-  window.dispatchEvent(
-    new CustomEvent(
-      "seolcheon:athlete-selected",
-      {
-        detail:
-          athlete
-      }
-    )
-  );
-
-}
-
-
-/* ============================================================
-   13. SELECTED ATHLETE UI
-============================================================ */
-
-function refreshSelectedAthleteUI() {
-
-  const athlete =
-    AppState.selectedAthlete;
-
-
-  document
-    .querySelectorAll(
-      "[data-selected-athlete-name]"
-    )
-    .forEach(element => {
-
-      element.textContent =
-        athlete?.name ||
-        "선택 없음";
-
-    });
-
-
-  document
-    .querySelectorAll(
-      "[data-selected-athlete-sport]"
-    )
-    .forEach(element => {
-
-      element.textContent =
-        athlete?.sportName ||
-        athlete?.sport ||
-        "-";
-
-    });
-
-}
-
-
-/* ============================================================
-   14. SELECT SPORT
-============================================================ */
-
-function selectSport(
+function createSportCard(
   sport,
-  season = null
+  season
 ) {
 
-  AppState.selectedSport =
-    sport;
+  return `
+    <button
+      type="button"
+      class="sport-card"
+      data-select-sport="${escapeHTML(sport.id)}"
+      data-season="${escapeHTML(season)}"
+    >
 
+      <div>
 
-  AppState.selectedSeason =
-    season;
+        <div class="sport-card-icon">
+          ${sport.icon}
+        </div>
 
+        <h3>
+          ${escapeHTML(sport.name)}
+        </h3>
 
-  refreshAnalysisHeader();
+        <small>
+          ${season === "winter"
+            ? "WINTER SPORT"
+            : "SUMMER SPORT"}
+        </small>
 
+        <p>
+          ${escapeHTML(sport.description)}
+        </p>
 
-  window.dispatchEvent(
-    new CustomEvent(
-      "seolcheon:sport-selected",
-      {
-        detail: {
-          sport,
-          season
-        }
-      }
-    )
-  );
+      </div>
+
+    </button>
+  `;
 
 }
 
 
-/* ============================================================
-   15. ANALYSIS HEADER
-============================================================ */
 
-function refreshAnalysisHeader() {
+function renderSports() {
 
-  const sportTitle =
+  document
+    .querySelectorAll(
+      '[data-sport-selector="winter"]'
+    )
+    .forEach(
+      container => {
+
+        container.innerHTML =
+          SPORTS_DATABASE.winter
+            .map(
+              sport =>
+                createSportCard(
+                  sport,
+                  "winter"
+                )
+            )
+            .join("");
+
+      }
+    );
+
+
+  document
+    .querySelectorAll(
+      '[data-sport-selector="summer"]'
+    )
+    .forEach(
+      container => {
+
+        container.innerHTML =
+          SPORTS_DATABASE.summer
+            .map(
+              sport =>
+                createSportCard(
+                  sport,
+                  "summer"
+                )
+            )
+            .join("");
+
+      }
+    );
+
+}
+
+
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const button =
+      event.target.closest(
+        "[data-select-sport]"
+      );
+
+
+    if (!button) {
+
+      return;
+
+    }
+
+
+    const sportId =
+      button.dataset.selectSport;
+
+
+    const season =
+      button.dataset.season;
+
+
+    AppState.selectedSportId =
+      sportId;
+
+
+    AppState.selectedSeason =
+      season;
+
+
+    const sport =
+      getSportById(
+        sportId
+      );
+
+
+    updateAnalysisSportHeader(
+      sport,
+      season
+    );
+
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "seolcheon:sport-selected",
+        {
+
+          detail: {
+
+            sport,
+
+            season
+
+          }
+
+        }
+      )
+    );
+
+
+    navigateTo(
+      "analysis"
+    );
+
+  }
+);
+
+
+
+function updateAnalysisSportHeader(
+  sport,
+  season
+) {
+
+  const title =
     document.querySelector(
       "[data-sport-analysis-title]"
     );
 
 
-  const seasonLabel =
+  const seasonText =
     document.querySelector(
       "[data-sport-analysis-season]"
     );
 
 
-  const athlete =
-    AppState.selectedAthlete;
+  if (title) {
 
-
-  let sportName =
-    "-";
-
-
-  if (
-    window.SportsDatabase &&
-    AppState.selectedSport
-  ) {
-
-    const sport =
-      window.SportsDatabase.getSport?.(
-        AppState.selectedSport
-      );
-
-
-    sportName =
+    title.textContent =
       sport?.name ||
-      AppState.selectedSport;
-
-  }
-
-  else if (
-    athlete?.sportName
-  ) {
-
-    sportName =
-      athlete.sportName;
+      "종목을 선택하세요";
 
   }
 
 
-  if (sportTitle) {
+  if (seasonText) {
 
-    sportTitle.textContent =
-      sportName === "-"
-        ? "종목을 선택하세요"
-        : sportName + " 자세분석";
-
-  }
-
-
-  if (seasonLabel) {
-
-    const season =
-      AppState.selectedSeason ||
-      athlete?.season;
-
-
-    seasonLabel.textContent =
+    seasonText.textContent =
       season === "winter"
         ? "WINTER SPORTS"
         : season === "summer"
@@ -1151,25 +1411,797 @@ function refreshAnalysisHeader() {
 
   }
 
+}
 
-  refreshSelectedAthleteUI();
+
+
+/* =========================================================
+   09. ATHLETE FORM
+========================================================= */
+
+const athleteForm =
+  document.querySelector(
+    "[data-athlete-form]"
+  );
+
+
+function resetAthleteForm() {
+
+  AppState.editingAthleteId =
+    null;
+
+
+  athleteForm?.reset();
+
+
+  const school =
+    athleteForm?.elements[
+      "school"
+    ];
+
+
+  const team =
+    athleteForm?.elements[
+      "team"
+    ];
+
+
+  if (school) {
+
+    school.value =
+      "설천고";
+
+  }
+
+
+  if (team) {
+
+    team.value =
+      "설천고";
+
+  }
+
+
+  const submit =
+    document.querySelector(
+      "[data-athlete-submit]"
+    );
+
+
+  if (submit) {
+
+    submit.textContent =
+      "선수 등록";
+
+  }
+
+
+  const message =
+    document.querySelector(
+      "[data-athlete-message]"
+    );
+
+
+  if (message) {
+
+    message.textContent =
+      "";
+
+  }
 
 }
 
 
-/* ============================================================
-   16. ANALYSIS MODE
-============================================================ */
 
-function setAnalysisMode(
-  mode
+athleteForm?.addEventListener(
+  "submit",
+  event => {
+
+    event.preventDefault();
+
+
+    const formData =
+      new FormData(
+        athleteForm
+      );
+
+
+    const sportId =
+      String(
+        formData.get(
+          "sport"
+        ) ||
+        ""
+      );
+
+
+    const sport =
+      getSportById(
+        sportId
+      );
+
+
+    const athleteData = {
+
+      name:
+        String(
+          formData.get(
+            "name"
+          ) ||
+          ""
+        ).trim(),
+
+      school:
+        String(
+          formData.get(
+            "school"
+          ) ||
+          "설천고"
+        ).trim(),
+
+      grade:
+        String(
+          formData.get(
+            "grade"
+          ) ||
+          ""
+        ),
+
+      gender:
+        String(
+          formData.get(
+            "gender"
+          ) ||
+          ""
+        ),
+
+      birthDate:
+        String(
+          formData.get(
+            "birthDate"
+          ) ||
+          ""
+        ),
+
+      season:
+        String(
+          formData.get(
+            "season"
+          ) ||
+          ""
+        ),
+
+      sport:
+        sportId,
+
+      sportName:
+        sport?.name ||
+        sportId,
+
+      event:
+        String(
+          formData.get(
+            "event"
+          ) ||
+          ""
+        ).trim(),
+
+      height:
+        Number(
+          formData.get(
+            "height"
+          )
+        ) ||
+        null,
+
+      weight:
+        Number(
+          formData.get(
+            "weight"
+          )
+        ) ||
+        null,
+
+      career:
+        String(
+          formData.get(
+            "career"
+          ) ||
+          ""
+        ).trim(),
+
+      team:
+        String(
+          formData.get(
+            "team"
+          ) ||
+          ""
+        ).trim(),
+
+      memo:
+        String(
+          formData.get(
+            "memo"
+          ) ||
+          ""
+        ).trim()
+
+    };
+
+
+    if (
+      !athleteData.name
+    ) {
+
+      showAthleteMessage(
+        "선수 이름을 입력해주세요."
+      );
+
+      return;
+
+    }
+
+
+    if (
+      !athleteData.sport
+    ) {
+
+      showAthleteMessage(
+        "종목을 선택해주세요."
+      );
+
+      return;
+
+    }
+
+
+    if (
+      AppState.editingAthleteId
+    ) {
+
+      const index =
+        AppState.athletes.findIndex(
+          athlete =>
+            athlete.id ===
+            AppState.editingAthleteId
+        );
+
+
+      if (
+        index !== -1
+      ) {
+
+        AppState.athletes[
+          index
+        ] = {
+
+          ...AppState.athletes[
+            index
+          ],
+
+          ...athleteData,
+
+          updatedAt:
+            new Date()
+              .toISOString()
+
+        };
+
+      }
+
+
+      showAthleteMessage(
+        "선수 정보가 수정되었습니다."
+      );
+
+    }
+
+    else {
+
+      const athlete = {
+
+        id:
+          createId(
+            "athlete"
+          ),
+
+        ...athleteData,
+
+        createdAt:
+          new Date()
+            .toISOString(),
+
+        updatedAt:
+          new Date()
+            .toISOString()
+
+      };
+
+
+      AppState.athletes.unshift(
+        athlete
+      );
+
+
+      AppState.selectedAthleteId =
+        athlete.id;
+
+
+      localStorage.setItem(
+        APP_CONFIG.storage.selectedAthlete,
+        athlete.id
+      );
+
+
+      showAthleteMessage(
+        "선수가 등록되었습니다."
+      );
+
+    }
+
+
+    saveAthletes();
+
+    renderAll();
+
+
+    setTimeout(
+      resetAthleteForm,
+      500
+    );
+
+  }
+);
+
+
+
+function showAthleteMessage(
+  text
 ) {
 
+  const message =
+    document.querySelector(
+      "[data-athlete-message]"
+    );
+
+
+  if (message) {
+
+    message.textContent =
+      text;
+
+  }
+
+}
+
+
+
+document
+  .querySelector(
+    "[data-athlete-cancel]"
+  )
+  ?.addEventListener(
+    "click",
+    resetAthleteForm
+  );
+
+
+
+/* =========================================================
+   10. ATHLETE LIST
+========================================================= */
+
+function renderAthletes() {
+
+  const container =
+    document.querySelector(
+      "[data-athlete-list]"
+    );
+
+
+  if (!container) {
+
+    return;
+
+  }
+
+
+  const search =
+    (
+      document.querySelector(
+        "[data-athlete-search]"
+      )?.value ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+
+  const filter =
+    document.querySelector(
+      "[data-athlete-sport-filter]"
+    )?.value ||
+    "all";
+
+
+  let athletes =
+    [...AppState.athletes];
+
+
+  if (search) {
+
+    athletes =
+      athletes.filter(
+        athlete => {
+
+          return [
+
+            athlete.name,
+
+            athlete.school,
+
+            athlete.team,
+
+            athlete.sportName,
+
+            athlete.event
+
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(
+              search
+            );
+
+        }
+      );
+
+  }
+
+
   if (
-    ![
-      "realtime",
-      "video"
-    ].includes(mode)
+    filter !==
+    "all"
+  ) {
+
+    athletes =
+      athletes.filter(
+        athlete =>
+          athlete.sport ===
+          filter
+      );
+
+  }
+
+
+  if (
+    athletes.length ===
+    0
+  ) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+        등록된 선수가 없습니다.
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    athletes
+      .map(
+        athlete => {
+
+          const selected =
+            athlete.id ===
+            AppState.selectedAthleteId;
+
+
+          return `
+            <article
+              class="athlete-card ${selected ? "selected" : ""}"
+              data-athlete-card="${escapeHTML(athlete.id)}"
+            >
+
+              <div class="athlete-avatar">
+                ${escapeHTML(
+                  athlete.name
+                    .slice(0, 1)
+                )}
+              </div>
+
+              <div class="athlete-card-info">
+
+                <strong>
+                  ${escapeHTML(athlete.name)}
+                </strong>
+
+                <span>
+                  ${escapeHTML(athlete.school || "-")}
+                  ·
+                  ${escapeHTML(athlete.grade || "-")}
+                  ·
+                  ${escapeHTML(athlete.sportName || "-")}
+                </span>
+
+              </div>
+
+              <div class="athlete-card-actions">
+
+                <button
+                  type="button"
+                  class="mini-button"
+                  data-athlete-select="${escapeHTML(athlete.id)}"
+                >
+                  선택
+                </button>
+
+                <button
+                  type="button"
+                  class="mini-button"
+                  data-athlete-analysis="${escapeHTML(athlete.id)}"
+                >
+                  분석
+                </button>
+
+                <button
+                  type="button"
+                  class="mini-button"
+                  data-athlete-edit="${escapeHTML(athlete.id)}"
+                >
+                  수정
+                </button>
+
+                <button
+                  type="button"
+                  class="danger-button"
+                  data-athlete-delete="${escapeHTML(athlete.id)}"
+                >
+                  삭제
+                </button>
+
+              </div>
+
+            </article>
+          `;
+
+        }
+      )
+      .join("");
+
+}
+
+
+
+document
+  .querySelector(
+    "[data-athlete-search]"
+  )
+  ?.addEventListener(
+    "input",
+    renderAthletes
+  );
+
+
+
+document
+  .querySelector(
+    "[data-athlete-sport-filter]"
+  )
+  ?.addEventListener(
+    "change",
+    renderAthletes
+  );
+
+
+
+/* =========================================================
+   11. ATHLETE ACTIONS
+========================================================= */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const select =
+      event.target.closest(
+        "[data-athlete-select]"
+      );
+
+
+    if (select) {
+
+      selectAthlete(
+        select.dataset
+          .athleteSelect
+      );
+
+      return;
+
+    }
+
+
+    const analysis =
+      event.target.closest(
+        "[data-athlete-analysis]"
+      );
+
+
+    if (analysis) {
+
+      const athlete =
+        getAthleteById(
+          analysis.dataset
+            .athleteAnalysis
+        );
+
+
+      if (!athlete) {
+
+        return;
+
+      }
+
+
+      selectAthlete(
+        athlete.id
+      );
+
+
+      AppState.selectedSportId =
+        athlete.sport;
+
+
+      AppState.selectedSeason =
+        athlete.season ||
+        null;
+
+
+      updateAnalysisSportHeader(
+        getSportById(
+          athlete.sport
+        ),
+        athlete.season
+      );
+
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "seolcheon:sport-selected",
+          {
+
+            detail: {
+
+              sport:
+                getSportById(
+                  athlete.sport
+                ),
+
+              season:
+                athlete.season
+
+            }
+
+          }
+        )
+      );
+
+
+      navigateTo(
+        "analysis"
+      );
+
+
+      return;
+
+    }
+
+
+    const edit =
+      event.target.closest(
+        "[data-athlete-edit]"
+      );
+
+
+    if (edit) {
+
+      editAthlete(
+        edit.dataset
+          .athleteEdit
+      );
+
+      return;
+
+    }
+
+
+    const remove =
+      event.target.closest(
+        "[data-athlete-delete]"
+      );
+
+
+    if (remove) {
+
+      deleteAthlete(
+        remove.dataset
+          .athleteDelete
+      );
+
+    }
+
+  }
+);
+
+
+
+function selectAthlete(
+  athleteId
+) {
+
+  const athlete =
+    getAthleteById(
+      athleteId
+    );
+
+
+  if (!athlete) {
+
+    return;
+
+  }
+
+
+  AppState.selectedAthleteId =
+    athleteId;
+
+
+  localStorage.setItem(
+    APP_CONFIG.storage.selectedAthlete,
+    athleteId
+  );
+
+
+  updateSelectedAthleteUI();
+
+  renderAthletes();
+
+
+  window.dispatchEvent(
+    new CustomEvent(
+      "seolcheon:athlete-selected",
+      {
+
+        detail: {
+
+          athlete
+
+        }
+
+      }
+    )
+  );
+
+}
+
+
+
+function editAthlete(
+  athleteId
+) {
+
+  const athlete =
+    getAthleteById(
+      athleteId
+    );
+
+
+  if (
+    !athlete ||
+    !athleteForm
   ) {
 
     return;
@@ -1177,264 +2209,161 @@ function setAnalysisMode(
   }
 
 
-  AppState.analysisMode =
-    mode;
+  AppState.editingAthleteId =
+    athleteId;
 
 
-  document
-    .querySelectorAll(
-      "[data-analysis-mode]"
-    )
-    .forEach(button => {
+  Object.entries(
+    athlete
+  )
+    .forEach(
+      ([key, value]) => {
 
-      button.classList.toggle(
-        "active",
-        button.dataset.analysisMode ===
-          mode
-      );
-
-    });
+        const field =
+          athleteForm.elements[
+            key
+          ];
 
 
-  window.dispatchEvent(
-    new CustomEvent(
-      "seolcheon:analysis-mode",
-      {
-        detail:
-          mode
-      }
-    )
-  );
+        if (!field) {
 
-}
+          return;
+
+        }
 
 
-/* ============================================================
-   17. ANALYSIS MODE BUTTONS
-============================================================ */
-
-function initializeAnalysisModes() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const button =
-        event.target.closest(
-          "[data-analysis-mode]"
-        );
-
-
-      if (!button) {
-
-        return;
+        field.value =
+          value ?? "";
 
       }
+    );
 
 
-      setAnalysisMode(
-        button.dataset.analysisMode
-      );
+  const submit =
+    document.querySelector(
+      "[data-athlete-submit]"
+    );
 
+
+  if (submit) {
+
+    submit.textContent =
+      "선수 수정";
+
+  }
+
+
+  athleteForm.scrollIntoView(
+    {
+      behavior:
+        "smooth",
+
+      block:
+        "start"
     }
   );
 
 }
 
 
-/* ============================================================
-   18. DASHBOARD
-============================================================ */
 
-function refreshDashboard() {
-
-  refreshDashboardCounters();
-
-  refreshDashboardPerformance();
-
-  refreshDashboardRecent();
-
-}
-
-
-/* ============================================================
-   19. DASHBOARD COUNTERS
-============================================================ */
-
-function refreshDashboardCounters() {
-
-  const athleteCount =
-    AppState.athletes.length;
-
-
-  const analysisCount =
-    AppState.analyses.length;
-
-
-  const reportCount =
-    AppState.reports.length;
-
-
-  const scores =
-    AppState.analyses
-      .map(
-        analysis =>
-          Number(
-            analysis.overallScore ??
-            analysis.score
-          )
-      )
-      .filter(
-        Number.isFinite
-      );
-
-
-  const averageScore =
-    scores.length
-      ? Math.round(
-          Utils.average(scores)
-        )
-      : null;
-
-
-  setText(
-    "[data-athlete-count]",
-    athleteCount
-  );
-
-
-  setText(
-    "[data-analysis-count]",
-    analysisCount
-  );
-
-
-  setText(
-    "[data-report-count]",
-    reportCount
-  );
-
-
-  setText(
-    "[data-average-score]",
-    averageScore ??
-    "--"
-  );
-
-}
-
-
-/* ============================================================
-   20. DASHBOARD PERFORMANCE
-============================================================ */
-
-function refreshDashboardPerformance() {
+function deleteAthlete(
+  athleteId
+) {
 
   const athlete =
-    AppState.selectedAthlete;
+    getAthleteById(
+      athleteId
+    );
 
 
-  let analyses =
-    AppState.analyses;
+  if (!athlete) {
 
-
-  if (athlete) {
-
-    analyses =
-      analyses.filter(
-        analysis =>
-          analysis.athleteId ===
-          athlete.id
-      );
+    return;
 
   }
 
 
-  const latest =
-    analyses
-      .slice()
-      .sort(
-        (a, b) =>
-          new Date(
-            b.createdAt ||
-            b.date ||
-            0
-          ) -
-          new Date(
-            a.createdAt ||
-            a.date ||
-            0
-          )
-      )[0];
+  const confirmed =
+    confirm(
+      `${athlete.name} 선수 정보를 삭제할까요?\n관련 분석 기록은 유지됩니다.`
+    );
 
 
-  const scores = {
+  if (!confirmed) {
 
-    posture:
-      latest?.scores?.posture ??
-      latest?.posture ??
-      0,
+    return;
 
-    symmetry:
-      latest?.scores?.symmetry ??
-      latest?.symmetry ??
-      0,
-
-    technique:
-      latest?.scores?.technique ??
-      latest?.technique ??
-      0,
-
-    elite:
-      latest?.scores?.elite ??
-      latest?.elite ??
-      0
-
-  };
+  }
 
 
-  Object.entries(
-    scores
-  )
+  AppState.athletes =
+    AppState.athletes.filter(
+      item =>
+        item.id !==
+        athleteId
+    );
+
+
+  if (
+    AppState.selectedAthleteId ===
+    athleteId
+  ) {
+
+    AppState.selectedAthleteId =
+      null;
+
+
+    localStorage.removeItem(
+      APP_CONFIG.storage.selectedAthlete
+    );
+
+  }
+
+
+  saveAthletes();
+
+  renderAll();
+
+}
+
+
+
+/* =========================================================
+   12. SELECTED ATHLETE UI
+========================================================= */
+
+function updateSelectedAthleteUI() {
+
+  const athlete =
+    getSelectedAthlete();
+
+
+  document
+    .querySelectorAll(
+      "[data-selected-athlete-name]"
+    )
     .forEach(
-      ([key, value]) => {
+      element => {
 
-        const score =
-          Math.round(
-            Utils.clamp(value)
-          );
+        element.textContent =
+          athlete?.name ||
+          "선택 없음";
 
-
-        document
-          .querySelectorAll(
-            `[data-dashboard-score="${key}"]`
-          )
-          .forEach(
-            element => {
-
-              element.textContent =
-                latest
-                  ? score
-                  : "--";
-
-            }
-          );
+      }
+    );
 
 
-        document
-          .querySelectorAll(
-            `[data-dashboard-bar="${key}"]`
-          )
-          .forEach(
-            element => {
+  document
+    .querySelectorAll(
+      "[data-selected-athlete-sport]"
+    )
+    .forEach(
+      element => {
 
-              element.style.width =
-                latest
-                  ? score + "%"
-                  : "0%";
-
-            }
-          );
+        element.textContent =
+          athlete?.sportName ||
+          "-";
 
       }
     );
@@ -1442,11 +2371,421 @@ function refreshDashboardPerformance() {
 }
 
 
-/* ============================================================
-   21. DASHBOARD RECENT
-============================================================ */
 
-function refreshDashboardRecent() {
+/* =========================================================
+   13. CREATE ANALYSIS RECORD
+========================================================= */
+
+function createAnalysisRecord(
+  analysisData = {}
+) {
+
+  const athlete =
+    getSelectedAthlete();
+
+
+  const sport =
+    getSportById(
+      analysisData.sportId ||
+      AppState.selectedSportId ||
+      athlete?.sport
+    );
+
+
+  const record = {
+
+    id:
+      createId(
+        "analysis"
+      ),
+
+    athleteId:
+      athlete?.id ||
+      null,
+
+    athleteName:
+      athlete?.name ||
+      "미지정 선수",
+
+    school:
+      athlete?.school ||
+      "설천고",
+
+    grade:
+      athlete?.grade ||
+      "",
+
+    sportId:
+      sport?.id ||
+      analysisData.sportId ||
+      "",
+
+    sportName:
+      sport?.name ||
+      analysisData.sportName ||
+      "종목 미지정",
+
+    season:
+      AppState.selectedSeason ||
+      athlete?.season ||
+      "",
+
+    mode:
+      analysisData.mode ||
+      "video",
+
+    overallScore:
+      Number(
+        analysisData.overallScore
+      ) ||
+      0,
+
+    scores: {
+
+      posture:
+        Number(
+          analysisData.scores
+            ?.posture
+        ) ||
+        0,
+
+      symmetry:
+        Number(
+          analysisData.scores
+            ?.symmetry
+        ) ||
+        0,
+
+      technique:
+        Number(
+          analysisData.scores
+            ?.technique
+        ) ||
+        0,
+
+      stability:
+        Number(
+          analysisData.scores
+            ?.stability
+        ) ||
+        0,
+
+      efficiency:
+        Number(
+          analysisData.scores
+            ?.efficiency
+        ) ||
+        0,
+
+      elite:
+        Number(
+          analysisData.scores
+            ?.elite
+        ) ||
+        0
+
+    },
+
+    angles:
+      analysisData.angles ||
+      {},
+
+    metrics:
+      analysisData.metrics ||
+      {},
+
+    technique:
+      analysisData.technique ||
+      "",
+
+    transitions:
+      analysisData.transitions ||
+      [],
+
+    segments:
+      analysisData.segments ||
+      [],
+
+    feedback:
+      analysisData.feedback ||
+      [],
+
+    problems:
+      analysisData.problems ||
+      [],
+
+    training:
+      analysisData.training ||
+      [],
+
+    images:
+      analysisData.images ||
+      {},
+
+    threeD:
+      analysisData.threeD ||
+      {},
+
+    createdAt:
+      new Date()
+        .toISOString()
+
+  };
+
+
+  AppState.analyses.unshift(
+    record
+  );
+
+
+  saveAnalyses();
+
+  renderDashboard();
+
+  renderRecords();
+
+
+  return record;
+
+}
+
+
+
+/* =========================================================
+   14. CREATE REPORT RECORD
+========================================================= */
+
+function createReportRecord(
+  reportData = {}
+) {
+
+  const report = {
+
+    id:
+      createId(
+        "report"
+      ),
+
+    ...reportData,
+
+    createdAt:
+      reportData.createdAt ||
+      new Date()
+        .toISOString()
+
+  };
+
+
+  AppState.reports.unshift(
+    report
+  );
+
+
+  saveReports();
+
+  renderDashboard();
+
+
+  return report;
+
+}
+
+
+
+/* =========================================================
+   15. DASHBOARD
+========================================================= */
+
+function renderDashboard() {
+
+  const athleteCount =
+    document.querySelector(
+      "[data-athlete-count]"
+    );
+
+
+  const analysisCount =
+    document.querySelector(
+      "[data-analysis-count]"
+    );
+
+
+  const reportCount =
+    document.querySelector(
+      "[data-report-count]"
+    );
+
+
+  const averageScore =
+    document.querySelector(
+      "[data-average-score]"
+    );
+
+
+  if (athleteCount) {
+
+    athleteCount.textContent =
+      AppState.athletes.length;
+
+  }
+
+
+  if (analysisCount) {
+
+    analysisCount.textContent =
+      AppState.analyses.length;
+
+  }
+
+
+  if (reportCount) {
+
+    reportCount.textContent =
+      AppState.reports.length;
+
+  }
+
+
+  const avg =
+    average(
+      AppState.analyses.map(
+        analysis =>
+          analysis.overallScore
+      )
+    );
+
+
+  if (averageScore) {
+
+    averageScore.textContent =
+      avg === null
+        ? "--"
+        : Math.round(
+            avg
+          );
+
+  }
+
+
+  renderDashboardPerformance();
+
+  renderRecentAnalyses();
+
+}
+
+
+
+function renderDashboardPerformance() {
+
+  const selected =
+    getSelectedAthlete();
+
+
+  let records =
+    AppState.analyses;
+
+
+  if (selected) {
+
+    const athleteRecords =
+      records.filter(
+        record =>
+          record.athleteId ===
+          selected.id
+      );
+
+
+    if (
+      athleteRecords.length
+    ) {
+
+      records =
+        athleteRecords;
+
+    }
+
+  }
+
+
+  const latest =
+    records[0];
+
+
+  const keys = [
+
+    "posture",
+
+    "symmetry",
+
+    "technique",
+
+    "elite"
+
+  ];
+
+
+  keys.forEach(
+    key => {
+
+      const score =
+        latest?.scores?.[
+          key
+        ];
+
+
+      const value =
+        Number.isFinite(
+          Number(score)
+        )
+          ? clamp(
+              Number(score),
+              0,
+              100
+            )
+          : null;
+
+
+      document
+        .querySelectorAll(
+          `[data-dashboard-score="${key}"]`
+        )
+        .forEach(
+          element => {
+
+            element.textContent =
+              value === null
+                ? "--"
+                : Math.round(
+                    value
+                  );
+
+          }
+        );
+
+
+      document
+        .querySelectorAll(
+          `[data-dashboard-bar="${key}"]`
+        )
+        .forEach(
+          element => {
+
+            element.style.width =
+              value === null
+                ? "0%"
+                : `${value}%`;
+
+          }
+        );
+
+    }
+  );
+
+}
+
+
+
+function renderRecentAnalyses() {
 
   const container =
     document.querySelector(
@@ -1462,35 +2801,22 @@ function refreshDashboardRecent() {
 
 
   const recent =
-    AppState.analyses
-      .slice()
-      .sort(
-        (a, b) =>
-          new Date(
-            b.createdAt ||
-            b.date ||
-            0
-          ) -
-          new Date(
-            a.createdAt ||
-            a.date ||
-            0
-          )
-      )
-      .slice(
-        0,
-        5
-      );
+    AppState.analyses.slice(
+      0,
+      5
+    );
 
 
-  if (!recent.length) {
+  if (
+    recent.length ===
+    0
+  ) {
 
-    container.innerHTML =
-      `
-        <div class="empty-state">
-          분석 기록이 없습니다.
-        </div>
-      `;
+    container.innerHTML = `
+      <div class="empty-state">
+        분석 기록이 없습니다.
+      </div>
+    `;
 
     return;
 
@@ -1500,174 +2826,164 @@ function refreshDashboardRecent() {
   container.innerHTML =
     recent
       .map(
-        analysis => {
+        record => `
+          <div class="recent-analysis-item">
 
-          const athlete =
-            AppState.athletes.find(
-              item =>
-                item.id ===
-                analysis.athleteId
-            );
+            <div>
 
+              <strong>
+                ${escapeHTML(record.athleteName)}
+              </strong>
 
-          const name =
-            athlete?.name ||
-            analysis.athleteName ||
-            "선수 미지정";
+              <span>
+                ${escapeHTML(record.sportName)}
+                ·
+                ${escapeHTML(formatDate(record.createdAt))}
+              </span>
 
+            </div>
 
-          const sport =
-            analysis.sportName ||
-            analysis.sport ||
-            "-";
+            <div class="recent-analysis-score">
+              ${Math.round(
+                Number(
+                  record.overallScore
+                ) ||
+                0
+              )}
+            </div>
 
-
-          const score =
-            analysis.overallScore ??
-            analysis.score ??
-            "--";
-
-
-          return `
-            <button
-              type="button"
-              class="record-card"
-              data-open-analysis-record="${Utils.escapeHTML(
-                analysis.id || ""
-              )}"
-            >
-
-              <div class="record-main">
-
-                <strong>
-                  ${Utils.escapeHTML(name)}
-                </strong>
-
-                <span>
-                  ${Utils.escapeHTML(sport)}
-                  ·
-                  ${Utils.escapeHTML(
-                    Utils.formatDate(
-                      analysis.createdAt ||
-                      analysis.date
-                    )
-                  )}
-                </span>
-
-              </div>
-
-              <div class="record-actions">
-
-                <strong class="text-blue">
-                  ${Utils.escapeHTML(score)}
-                </strong>
-
-              </div>
-
-            </button>
-          `;
-
-        }
+          </div>
+        `
       )
       .join("");
 
 }
 
 
-/* ============================================================
-   22. SET TEXT
-============================================================ */
 
-function setText(
-  selector,
-  value
-) {
+/* =========================================================
+   16. RECORDS
+========================================================= */
 
-  document
-    .querySelectorAll(
-      selector
-    )
-    .forEach(
-      element => {
+function renderRecords() {
 
-        element.textContent =
-          value;
-
-      }
+  const container =
+    document.querySelector(
+      "[data-analysis-record-list]"
     );
 
+
+  if (!container) {
+
+    return;
+
+  }
+
+
+  if (
+    AppState.analyses.length ===
+    0
+  ) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+        저장된 분석 기록이 없습니다.
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    AppState.analyses
+      .map(
+        record => `
+          <article class="record-card">
+
+            <div class="record-card-top">
+
+              <div>
+
+                <h3>
+                  ${escapeHTML(record.athleteName)}
+                </h3>
+
+                <p>
+                  ${escapeHTML(record.sportName)}
+                  ·
+                  ${escapeHTML(formatDate(record.createdAt))}
+                </p>
+
+              </div>
+
+              <div class="record-score">
+                ${Math.round(
+                  Number(
+                    record.overallScore
+                  ) ||
+                  0
+                )}
+              </div>
+
+            </div>
+
+            <div class="record-actions">
+
+              <button
+                type="button"
+                class="mini-button"
+                data-record-report="${escapeHTML(record.id)}"
+              >
+                리포트
+              </button>
+
+              <button
+                type="button"
+                class="danger-button"
+                data-record-delete="${escapeHTML(record.id)}"
+              >
+                삭제
+              </button>
+
+            </div>
+
+          </article>
+        `
+      )
+      .join("");
+
 }
 
 
-/* ============================================================
-   23. QUICK NAVIGATION
-============================================================ */
 
-function initializeQuickActions() {
+/* =========================================================
+   17. RECORD ACTIONS
+========================================================= */
 
-  document.addEventListener(
-    "click",
-    event => {
+document.addEventListener(
+  "click",
+  event => {
 
-      const quick =
-        event.target.closest(
-          "[data-quick-nav]"
-        );
-
-
-      if (!quick) {
-
-        return;
-
-      }
-
-
-      navigateTo(
-        quick.dataset.quickNav
+    const report =
+      event.target.closest(
+        "[data-record-report]"
       );
 
-    }
-  );
 
-}
+    if (report) {
 
-
-/* ============================================================
-   24. OPEN ANALYSIS RECORD
-============================================================ */
-
-function initializeRecordOpening() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const button =
-        event.target.closest(
-          "[data-open-analysis-record]"
-        );
-
-
-      if (!button) {
-
-        return;
-
-      }
-
-
-      const id =
-        button.dataset
-          .openAnalysisRecord;
-
-
-      const analysis =
+      const record =
         AppState.analyses.find(
           item =>
-            item.id === id
+            item.id ===
+            report.dataset
+              .recordReport
         );
 
 
-      if (!analysis) {
+      if (!record) {
 
         return;
 
@@ -1676,10 +2992,15 @@ function initializeRecordOpening() {
 
       window.dispatchEvent(
         new CustomEvent(
-          "seolcheon:open-record",
+          "seolcheon:open-report",
           {
-            detail:
-              analysis
+
+            detail: {
+
+              record
+
+            }
+
           }
         )
       );
@@ -1689,1321 +3010,235 @@ function initializeRecordOpening() {
         "report"
       );
 
-    }
-  );
 
-}
-
-
-/* ============================================================
-   25. GLOBAL DATA EVENTS
-============================================================ */
-
-function initializeGlobalEvents() {
-
-  window.addEventListener(
-    "seolcheon:athletes-updated",
-    event => {
-
-      if (
-        Array.isArray(
-          event.detail
-        )
-      ) {
-
-        AppState.athletes =
-          event.detail;
-
-      }
-
-      else {
-
-        AppState.athletes =
-          StorageManager.read(
-            APP_CONFIG.storage.athletes,
-            []
-          );
-
-      }
-
-
-      saveAthletes();
-
-
-      if (
-        AppState.selectedAthlete
-      ) {
-
-        const refreshed =
-          AppState.athletes.find(
-            athlete =>
-              athlete.id ===
-              AppState
-                .selectedAthlete
-                .id
-          );
-
-
-        AppState.selectedAthlete =
-          refreshed ||
-          null;
-
-      }
-
-
-      refreshSelectedAthleteUI();
-
-      refreshDashboard();
+      return;
 
     }
-  );
 
 
-  window.addEventListener(
-    "seolcheon:analysis-saved",
-    event => {
-
-      const analysis =
-        event.detail;
+    const remove =
+      event.target.closest(
+        "[data-record-delete]"
+      );
 
 
-      if (!analysis) {
+    if (!remove) {
 
-        return;
-
-      }
-
-
-      const index =
-        AppState.analyses.findIndex(
-          item =>
-            item.id ===
-            analysis.id
-        );
-
-
-      if (
-        index >= 0
-      ) {
-
-        AppState.analyses[
-          index
-        ] =
-          analysis;
-
-      }
-
-      else {
-
-        AppState.analyses.unshift(
-          analysis
-        );
-
-      }
-
-
-      saveAnalyses();
-
-      refreshDashboard();
+      return;
 
     }
-  );
 
 
-  window.addEventListener(
-    "seolcheon:report-saved",
-    event => {
-
-      const report =
-        event.detail;
+    const recordId =
+      remove.dataset
+        .recordDelete;
 
 
-      if (!report) {
-
-        return;
-
-      }
-
-
-      const index =
-        AppState.reports.findIndex(
-          item =>
-            item.id ===
-            report.id
-        );
+    const confirmed =
+      confirm(
+        "이 분석 기록을 삭제할까요?"
+      );
 
 
-      if (
-        index >= 0
-      ) {
+    if (!confirmed) {
 
-        AppState.reports[
-          index
-        ] =
-          report;
-
-      }
-
-      else {
-
-        AppState.reports.unshift(
-          report
-        );
-
-      }
-
-
-      saveReports();
-
-      refreshDashboard();
+      return;
 
     }
-  );
-
-}
-/* ============================================================
-   SEOLCHEON SPORTS PERFORMANCE LAB
-   APP.JS
-   PART 2 / 2
-============================================================ */
 
 
-/* ============================================================
-   26. ANALYSIS RESET
-============================================================ */
-
-function resetAnalysis() {
-
-  const confirmed =
-    window.confirm(
-      "현재 분석 화면을 초기화할까요?"
-    );
+    AppState.analyses =
+      AppState.analyses.filter(
+        item =>
+          item.id !==
+          recordId
+      );
 
 
-  if (!confirmed) {
+    saveAnalyses();
 
-    return;
+    renderDashboard();
+
+    renderRecords();
 
   }
+);
 
 
-  callModule(
-    "MotionAnalysis",
-    "reset"
-  );
 
+/* =========================================================
+   18. BACKUP
+========================================================= */
 
-  window.dispatchEvent(
-    new CustomEvent(
-      "seolcheon:analysis-reset"
-    )
-  );
-
-}
-
-
-/* ============================================================
-   27. ANALYSIS FINISH
-============================================================ */
-
-function finishAnalysis() {
-
-  if (
-    !AppState.selectedAthlete
-  ) {
-
-    alert(
-      "먼저 분석할 선수를 선택해주세요."
-    );
-
-    navigateTo(
-      "athletes"
-    );
-
-    return;
-
-  }
-
-
-  if (
-    !AppState.selectedSport &&
-    !AppState.selectedAthlete?.sport
-  ) {
-
-    alert(
-      "분석할 종목을 선택해주세요."
-    );
-
-    return;
-
-  }
-
-
-  /*
-    실제 자세분석 모듈에서
-    분석 결과를 가져온다.
-  */
-
-  let result =
-    callModule(
-      "MotionAnalysis",
-      "getResult"
-    );
-
-
-  /*
-    아직 분석 결과가 없을 경우
-    기본 결과 구조 생성
-  */
-
-  if (!result) {
-
-    result = {
-
-      scores: {
-
-        posture:
-          0,
-
-        symmetry:
-          0,
-
-        technique:
-          0,
-
-        stability:
-          0,
-
-        efficiency:
-          0,
-
-        elite:
-          0
-
-      },
-
-      metrics:
-        {},
-
-      angles:
-        {},
-
-      techniques:
-        [],
-
-      segments:
-        [],
-
-      images:
-        {},
-
-      feedback:
-        [],
-
-      training:
-        []
-
-    };
-
-  }
-
-
-  const athlete =
-    AppState.selectedAthlete;
-
-
-  const sport =
-    AppState.selectedSport ||
-    athlete.sport;
-
-
-  let sportName =
-    athlete.sportName ||
-    sport;
-
-
-  if (
-    window.SportsDatabase &&
-    sport
-  ) {
-
-    const sportInfo =
-      window.SportsDatabase
-        .getSport?.(
-          sport
-        );
-
-
-    if (sportInfo?.name) {
-
-      sportName =
-        sportInfo.name;
-
-    }
-
-  }
-
-
-  const scores =
-    result.scores ||
-    {};
-
-
-  const scoreValues =
-    Object.values(
-      scores
-    )
-      .map(Number)
-      .filter(
-        Number.isFinite
-      );
-
-
-  const overallScore =
-    scoreValues.length
-      ? Math.round(
-          Utils.average(
-            scoreValues
-          )
-        )
-      : 0;
-
-
-  const analysis = {
-
-    id:
-      Utils.uid(
-        "analysis"
-      ),
-
-    athleteId:
-      athlete.id,
-
-    athleteName:
-      athlete.name,
-
-    school:
-      athlete.school ||
-      APP_CONFIG.school,
-
-    grade:
-      athlete.grade ||
-      "",
-
-    sport:
-      sport,
-
-    sportName:
-      sportName,
-
-    season:
-      AppState.selectedSeason ||
-      athlete.season ||
-      "",
-
-    mode:
-      AppState.analysisMode,
-
-    createdAt:
-      new Date()
-        .toISOString(),
-
-    overallScore:
-      overallScore,
-
-    scores:
-      scores,
-
-    metrics:
-      result.metrics ||
-      {},
-
-    angles:
-      result.angles ||
-      {},
-
-    techniques:
-      result.techniques ||
-      [],
-
-    currentTechnique:
-      result.currentTechnique ||
-      "",
-
-    transitionCount:
-      result.transitionCount ||
-      0,
-
-    segments:
-      result.segments ||
-      [],
-
-    images:
-      result.images ||
-      {},
-
-    threeD:
-      result.threeD ||
-      {},
-
-    elite:
-      result.elite ||
-      {},
-
-    feedback:
-      result.feedback ||
-      [],
-
-    training:
-      result.training ||
-      []
-
-  };
-
-
-  AppState.analyses.unshift(
-    analysis
-  );
-
-
-  saveAnalyses();
-
-
-  window.dispatchEvent(
-    new CustomEvent(
-      "seolcheon:analysis-created",
-      {
-        detail:
-          analysis
-      }
-    )
-  );
-
-
-  /*
-    리포트 모듈에
-    방금 분석 전달
-  */
-
-  callModule(
-    "ReportManager",
-    "setAnalysis",
-    analysis
-  );
-
-
-  refreshDashboard();
-
-
-  navigateTo(
-    "report"
-  );
-
-}
-
-
-/* ============================================================
-   28. ANALYSIS ACTION BUTTONS
-============================================================ */
-
-function initializeAnalysisActions() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-
-      const resetButton =
-        event.target.closest(
-          "[data-analysis-reset]"
-        );
-
-
-      if (resetButton) {
-
-        resetAnalysis();
-
-        return;
-
-      }
-
-
-      const finishButton =
-        event.target.closest(
-          "[data-analysis-finish]"
-        );
-
-
-      if (finishButton) {
-
-        finishAnalysis();
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   29. REPORT BACK BUTTON
-============================================================ */
-
-function initializeReportNavigation() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const back =
-        event.target.closest(
-          "[data-report-back]"
-        );
-
-
-      if (!back) {
-
-        return;
-
-      }
-
-
-      navigateTo(
-        "analysis"
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   30. REPORT PRINT / PDF
-============================================================ */
-
-function initializeReportPrint() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const button =
-        event.target.closest(
-          "[data-report-print]"
-        );
-
-
-      if (!button) {
-
-        return;
-
-      }
-
-
-      window.print();
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   31. SELECT ATHLETE FROM BUTTON
-============================================================ */
-
-function initializeAthleteSelectionButtons() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const button =
-        event.target.closest(
-          "[data-select-athlete]"
-        );
-
-
-      if (!button) {
-
-        return;
-
-      }
-
-
-      const athleteId =
-        button.dataset
-          .selectAthlete;
-
-
-      selectAthlete(
-        athleteId
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   32. ATHLETE → ANALYSIS
-============================================================ */
-
-function initializeAthleteAnalysisButtons() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const button =
-        event.target.closest(
-          "[data-athlete-analysis]"
-        );
-
-
-      if (!button) {
-
-        return;
-
-      }
-
-
-      const athleteId =
-        button.dataset
-          .athleteAnalysis;
-
-
-      const athlete =
-        AppState.athletes.find(
-          item =>
-            item.id ===
-            athleteId
-        );
-
-
-      if (!athlete) {
-
-        return;
-
-      }
-
-
-      selectAthlete(
-        athlete
-      );
-
-
-      selectSport(
-        athlete.sport,
-        athlete.season
-      );
-
-
-      navigateTo(
-        "analysis"
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   33. SPORT CARD → ANALYSIS
-============================================================ */
-
-function initializeSportSelection() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const button =
-        event.target.closest(
-          "[data-select-sport]"
-        );
-
-
-      if (!button) {
-
-        return;
-
-      }
-
-
-      const sport =
-        button.dataset
-          .selectSport;
-
-
-      const season =
-        button.dataset
-          .season ||
-        null;
-
-
-      selectSport(
-        sport,
-        season
-      );
-
-
-      navigateTo(
-        "analysis"
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   34. ANALYSIS VIDEO CONTROL BRIDGE
-============================================================ */
-
-function initializeAnalysisVideoControls() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-
-      /*
-        CAMERA START
-      */
-
-      if (
-        event.target.closest(
-          "[data-camera-start]"
-        )
-      ) {
-
-        callModule(
-          "MotionAnalysis",
-          "startCamera"
-        );
-
-        return;
-
-      }
-
-
-      /*
-        PLAY
-      */
-
-      if (
-        event.target.closest(
-          "[data-analysis-play]"
-        )
-      ) {
-
-        callModule(
-          "MotionAnalysis",
-          "play"
-        );
-
-        return;
-
-      }
-
-
-      /*
-        PAUSE
-      */
-
-      if (
-        event.target.closest(
-          "[data-analysis-pause]"
-        )
-      ) {
-
-        callModule(
-          "MotionAnalysis",
-          "pause"
-        );
-
-        return;
-
-      }
-
-
-      /*
-        PREVIOUS FRAME
-      */
-
-      if (
-        event.target.closest(
-          "[data-analysis-frame-prev]"
-        )
-      ) {
-
-        callModule(
-          "MotionAnalysis",
-          "previousFrame"
-        );
-
-        return;
-
-      }
-
-
-      /*
-        NEXT FRAME
-      */
-
-      if (
-        event.target.closest(
-          "[data-analysis-frame-next]"
-        )
-      ) {
-
-        callModule(
-          "MotionAnalysis",
-          "nextFrame"
-        );
-
-        return;
-
-      }
-
-
-      /*
-        SNAPSHOT
-      */
-
-      if (
-        event.target.closest(
-          "[data-analysis-snapshot]"
-        )
-      ) {
-
-        callModule(
-          "MotionAnalysis",
-          "captureSnapshot"
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   35. VIDEO FILE UPLOAD
-============================================================ */
-
-function initializeVideoUpload() {
-
-  const input =
-    document.querySelector(
-      "[data-video-upload]"
-    );
-
-
-  input?.addEventListener(
-    "change",
-    event => {
-
-      const file =
-        event.target.files?.[0];
-
-
-      if (!file) {
-
-        return;
-
-      }
-
-
-      setAnalysisMode(
-        "video"
-      );
-
-
-      callModule(
-        "MotionAnalysis",
-        "loadVideo",
-        file
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   36. PLAYBACK SPEED / SLOW MOTION
-============================================================ */
-
-function initializePlaybackRate() {
-
-  const selector =
-    document.querySelector(
-      "[data-playback-rate]"
-    );
-
-
-  selector?.addEventListener(
-    "change",
-    event => {
-
-      const rate =
-        Number(
-          event.target.value
-        );
-
-
-      if (
-        !Number.isFinite(rate)
-      ) {
-
-        return;
-
-      }
-
-
-      callModule(
-        "MotionAnalysis",
-        "setPlaybackRate",
-        rate
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   37. VIDEO PROGRESS BAR
-============================================================ */
-
-function initializeVideoProgress() {
-
-  const progress =
-    document.querySelector(
-      "[data-video-progress]"
-    );
-
-
-  progress?.addEventListener(
-    "input",
-    event => {
-
-      const value =
-        Number(
-          event.target.value
-        );
-
-
-      callModule(
-        "MotionAnalysis",
-        "seekPercent",
-        value
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   38. 3D TOGGLE
-============================================================ */
-
-function initializeThreeDToggle() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const button =
-        event.target.closest(
-          "[data-3d-toggle]"
-        );
-
-
-      if (!button) {
-
-        return;
-
-      }
-
-
-      callModule(
-        "MotionAnalysis",
-        "toggle3D"
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   39. CAMERA PERMISSION CHECK
-============================================================ */
-
-async function checkCameraSupport() {
-
-  const supported =
-    !!(
-      navigator.mediaDevices &&
-      navigator.mediaDevices
-        .getUserMedia
-    );
-
-
-  if (!supported) {
-
-    return {
-
-      supported:
-        false,
-
-      permission:
-        "unsupported"
-
-    };
-
-  }
-
-
-  try {
-
-    if (
-      navigator.permissions &&
-      navigator.permissions.query
-    ) {
-
-      try {
-
-        const permission =
-          await navigator.permissions.query({
-            name:
-              "camera"
-          });
-
-
-        return {
-
-          supported:
-            true,
-
-          permission:
-            permission.state
-
-        };
-
-      }
-
-      catch {
-
-        /*
-          Safari에서는 camera permission query가
-          지원되지 않을 수 있음.
-        */
-
-      }
-
-    }
-
-
-    return {
-
-      supported:
-        true,
-
-      permission:
-        "unknown"
-
-    };
-
-  }
-
-  catch {
-
-    return {
-
-      supported:
-        true,
-
-      permission:
-        "unknown"
-
-    };
-
-  }
-
-}
-
-
-/* ============================================================
-   40. BASIC SYSTEM DIAGNOSTICS
-============================================================ */
-
-async function getBasicSystemStatus() {
-
-  const camera =
-    await checkCameraSupport();
-
-
-  const secure =
-    window.isSecureContext;
-
-
-  const storage =
-    typeof localStorage !==
-    "undefined";
-
-
-  const canvas =
-    !!document.createElement(
-      "canvas"
-    ).getContext;
-
-
-  const video =
-    !!document.createElement(
-      "video"
-    ).canPlayType;
-
-
-  const chart =
-    typeof window.Chart !==
-    "undefined";
-
+function createBackupData() {
 
   return {
 
-    secureContext:
-      secure,
+    application:
+      APP_CONFIG.name,
 
-    cameraSupport:
-      camera.supported,
+    version:
+      APP_CONFIG.version,
 
-    cameraPermission:
-      camera.permission,
+    exportedAt:
+      new Date()
+        .toISOString(),
 
-    localStorage:
-      storage,
+    athletes:
+      AppState.athletes,
 
-    canvas:
-      canvas,
+    analyses:
+      AppState.analyses,
 
-    video:
-      video,
-
-    chart:
-      chart
+    reports:
+      AppState.reports
 
   };
 
 }
 
 
-/* ============================================================
-   41. STATUS LABEL
-============================================================ */
 
-function setSystemStatus(
-  text
-) {
+function downloadBackup() {
 
-  document
-    .querySelectorAll(
-      "[data-system-status]"
-    )
-    .forEach(
-      element => {
+  const data =
+    createBackupData();
 
-        element.textContent =
-          text;
 
+  const blob =
+    new Blob(
+      [
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
+      ],
+      {
+        type:
+          "application/json"
       }
     );
+
+
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+
+  const link =
+    document.createElement(
+      "a"
+    );
+
+
+  link.href =
+    url;
+
+
+  link.download =
+    `seolcheon_backup_${Date.now()}.json`;
+
+
+  document.body.appendChild(
+    link
+  );
+
+
+  link.click();
+
+
+  link.remove();
+
+
+  URL.revokeObjectURL(
+    url
+  );
 
 }
 
 
-/* ============================================================
-   42. INITIAL SYSTEM STATUS
-============================================================ */
 
-async function initializeSystemStatus() {
+async function restoreBackupFile(
+  file
+) {
 
-  setSystemStatus(
-    "SYSTEM CHECK"
-  );
+  if (!file) {
+
+    return;
+
+  }
 
 
   try {
 
-    const status =
-      await getBasicSystemStatus();
+    const text =
+      await file.text();
 
 
-    const critical = [
-
-      status.secureContext,
-
-      status.localStorage,
-
-      status.canvas,
-
-      status.video
-
-    ];
-
-
-    const passed =
-      critical.filter(
-        Boolean
-      ).length;
+    const data =
+      JSON.parse(
+        text
+      );
 
 
     if (
-      passed ===
-      critical.length
+      !Array.isArray(
+        data.athletes
+      ) ||
+      !Array.isArray(
+        data.analyses
+      )
     ) {
 
-      setSystemStatus(
-        "SYSTEM ONLINE"
+      throw new Error(
+        "올바른 백업 파일이 아닙니다."
       );
 
     }
 
-    else {
 
-      setSystemStatus(
-        "SYSTEM WARNING"
-      );
+    AppState.athletes =
+      data.athletes;
 
-    }
+
+    AppState.analyses =
+      data.analyses;
+
+
+    AppState.reports =
+      Array.isArray(
+        data.reports
+      )
+        ? data.reports
+        : [];
+
+
+    saveAthletes();
+
+    saveAnalyses();
+
+    saveReports();
+
+    renderAll();
+
+
+    alert(
+      "백업 데이터를 복원했습니다."
+    );
 
   }
 
   catch (error) {
 
     console.error(
-      "[SYSTEM STATUS]",
       error
     );
 
 
-    setSystemStatus(
-      "SYSTEM ERROR"
+    alert(
+      "백업 파일을 불러오지 못했습니다."
     );
 
   }
@@ -3011,757 +3246,198 @@ async function initializeSystemStatus() {
 }
 
 
-/* ============================================================
-   43. RESTORE SELECTED SPORT
-============================================================ */
 
-function restoreAthleteSport() {
-
-  const athlete =
-    AppState.selectedAthlete;
-
-
-  if (!athlete) {
-
-    return;
-
-  }
+document
+  .querySelector(
+    "[data-backup-download]"
+  )
+  ?.addEventListener(
+    "click",
+    downloadBackup
+  );
 
 
-  AppState.selectedSport =
-    athlete.sport ||
-    null;
 
-
-  AppState.selectedSeason =
-    athlete.season ||
-    null;
-
-}
-
-
-/* ============================================================
-   44. STORAGE SYNCHRONIZATION
-============================================================ */
-
-function initializeStorageSync() {
-
-  window.addEventListener(
-    "storage",
+document
+  .querySelector(
+    "[data-backup-upload]"
+  )
+  ?.addEventListener(
+    "change",
     event => {
 
-      const keys =
-        Object.values(
-          APP_CONFIG.storage
-        );
-
-
-      if (
-        !keys.includes(
-          event.key
-        )
-      ) {
-
-        return;
-
-      }
-
-
-      loadAppData();
-
-      restoreAthleteSport();
-
-      refreshSelectedAthleteUI();
-
-      refreshDashboard();
-
-
-      runPageRefresh(
-        AppState.currentPage
+      restoreBackupFile(
+        event.target.files?.[0]
       );
 
     }
   );
 
-}
 
 
-/* ============================================================
-   45. KEYBOARD SHORTCUTS
-============================================================ */
+/* =========================================================
+   19. RESET DATA
+========================================================= */
 
-function initializeKeyboardShortcuts() {
-
-  document.addEventListener(
-    "keydown",
-    event => {
-
-      /*
-        입력 중에는 단축키 사용 안 함
-      */
-
-      const tag =
-        event.target.tagName
-          ?.toLowerCase();
-
-
-      if (
-        tag === "input" ||
-        tag === "textarea" ||
-        tag === "select"
-      ) {
-
-        return;
-
-      }
-
-
-      /*
-        SPACE
-        영상 재생 / 일시정지
-      */
-
-      if (
-        event.code ===
-        "Space" &&
-        AppState.currentPage ===
-        "analysis"
-      ) {
-
-        event.preventDefault();
-
-
-        callModule(
-          "MotionAnalysis",
-          "togglePlay"
-        );
-
-      }
-
-
-      /*
-        LEFT ARROW
-        이전 프레임
-      */
-
-      if (
-        event.code ===
-        "ArrowLeft" &&
-        AppState.currentPage ===
-        "analysis"
-      ) {
-
-        event.preventDefault();
-
-
-        callModule(
-          "MotionAnalysis",
-          "previousFrame"
-        );
-
-      }
-
-
-      /*
-        RIGHT ARROW
-        다음 프레임
-      */
-
-      if (
-        event.code ===
-        "ArrowRight" &&
-        AppState.currentPage ===
-        "analysis"
-      ) {
-
-        event.preventDefault();
-
-
-        callModule(
-          "MotionAnalysis",
-          "nextFrame"
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   46. WINDOW RESIZE
-============================================================ */
-
-function initializeResizeHandler() {
-
-  let resizeTimer =
-    null;
-
-
-  window.addEventListener(
-    "resize",
+document
+  .querySelector(
+    "[data-reset-all]"
+  )
+  ?.addEventListener(
+    "click",
     () => {
 
-      clearTimeout(
-        resizeTimer
-      );
-
-
-      resizeTimer =
-        setTimeout(
-          () => {
-
-            if (
-              window.innerWidth >
-              900
-            ) {
-
-              closeMobileSidebar();
-
-            }
-
-
-            callModule(
-              "MotionAnalysis",
-              "resize"
-            );
-
-          },
-          120
-        );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   47. PREVENT EMPTY LINK ACTION
-============================================================ */
-
-function initializeSafetyEvents() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const link =
-        event.target.closest(
-          'a[href="#"]'
+      const confirmed =
+        confirm(
+          "선수, 분석, 리포트 데이터를 모두 삭제할까요?"
         );
 
 
-      if (link) {
+      if (!confirmed) {
 
-        event.preventDefault();
+        return;
 
       }
 
+
+      AppState.athletes =
+        [];
+
+      AppState.analyses =
+        [];
+
+      AppState.reports =
+        [];
+
+      AppState.selectedAthleteId =
+        null;
+
+
+      localStorage.removeItem(
+        APP_CONFIG.storage.athletes
+      );
+
+      localStorage.removeItem(
+        APP_CONFIG.storage.analyses
+      );
+
+      localStorage.removeItem(
+        APP_CONFIG.storage.reports
+      );
+
+      localStorage.removeItem(
+        APP_CONFIG.storage.selectedAthlete
+      );
+
+
+      renderAll();
+
     }
   );
 
-}
 
 
-/* ============================================================
-   48. GET CURRENT ATHLETE
-============================================================ */
+/* =========================================================
+   20. RENDER ALL
+========================================================= */
 
-function getSelectedAthlete() {
+function renderAll() {
 
-  return (
-    AppState.selectedAthlete
-  );
+  renderSports();
 
-}
+  renderAthletes();
 
+  updateSelectedAthleteUI();
 
-/* ============================================================
-   49. GET ATHLETE BY ID
-============================================================ */
+  renderDashboard();
 
-function getAthleteById(id) {
-
-  return (
-    AppState.athletes.find(
-      athlete =>
-        athlete.id === id
-    ) ||
-    null
-  );
+  renderRecords();
 
 }
 
 
-/* ============================================================
-   50. GET ANALYSIS BY ID
-============================================================ */
 
-function getAnalysisById(id) {
+/* =========================================================
+   21. APP READY EVENT
+========================================================= */
 
-  return (
-    AppState.analyses.find(
-      analysis =>
-        analysis.id === id
-    ) ||
-    null
-  );
+function dispatchReadyEvent() {
 
-}
+  window.dispatchEvent(
+    new CustomEvent(
+      "seolcheon:app-ready",
+      {
 
+        detail: {
 
-/* ============================================================
-   51. GET ATHLETE ANALYSES
-============================================================ */
+          config:
+            APP_CONFIG,
 
-function getAthleteAnalyses(
-  athleteId
-) {
+          state:
+            AppState
 
-  return AppState.analyses
-    .filter(
-      analysis =>
-        analysis.athleteId ===
-        athleteId
+        }
+
+      }
     )
-    .sort(
-      (a, b) =>
-        new Date(
-          b.createdAt ||
-          0
-        ) -
-        new Date(
-          a.createdAt ||
-          0
-        )
-    );
-
-}
-
-
-/* ============================================================
-   52. ADD ANALYSIS
-============================================================ */
-
-function addAnalysis(
-  analysis
-) {
-
-  if (!analysis) {
-
-    return false;
-
-  }
-
-
-  if (!analysis.id) {
-
-    analysis.id =
-      Utils.uid(
-        "analysis"
-      );
-
-  }
-
-
-  if (!analysis.createdAt) {
-
-    analysis.createdAt =
-      new Date()
-        .toISOString();
-
-  }
-
-
-  AppState.analyses.unshift(
-    analysis
   );
 
-
-  saveAnalyses();
-
-  refreshDashboard();
-
-
-  return analysis;
-
 }
 
 
-/* ============================================================
-   53. DELETE ANALYSIS
-============================================================ */
 
-function deleteAnalysis(
-  analysisId
-) {
+/* =========================================================
+   22. INITIALIZE
+========================================================= */
 
-  const index =
-    AppState.analyses.findIndex(
-      analysis =>
-        analysis.id ===
-        analysisId
-    );
+function initializeApplication() {
+
+  loadApplicationData();
+
+  renderAll();
 
 
   if (
-    index < 0
+    sessionStorage.getItem(
+      "seolcheon_login"
+    ) ===
+    "true"
   ) {
 
-    return false;
+    openApplication();
 
   }
 
+  else {
 
-  AppState.analyses.splice(
-    index,
-    1
-  );
+    if (loginScreen) {
 
+      loginScreen.hidden =
+        false;
 
-  saveAnalyses();
-
-  refreshDashboard();
-
-
-  return true;
-
-}
-
-
-/* ============================================================
-   54. ADD REPORT
-============================================================ */
-
-function addReport(
-  report
-) {
-
-  if (!report) {
-
-    return false;
-
-  }
-
-
-  if (!report.id) {
-
-    report.id =
-      Utils.uid(
-        "report"
-      );
-
-  }
-
-
-  if (!report.createdAt) {
-
-    report.createdAt =
-      new Date()
-        .toISOString();
-
-  }
-
-
-  AppState.reports.unshift(
-    report
-  );
-
-
-  saveReports();
-
-  refreshDashboard();
-
-
-  return report;
-
-}
-
-
-/* ============================================================
-   55. APP PUBLIC API
-============================================================ */
-
-window.SeolcheonApp = {
-
-  config:
-    APP_CONFIG,
-
-  state:
-    AppState,
-
-  utils:
-    Utils,
-
-  storage:
-    StorageManager,
-
-
-  navigate:
-    navigateTo,
-
-
-  selectAthlete:
-    selectAthlete,
-
-
-  getSelectedAthlete:
-    getSelectedAthlete,
-
-
-  getAthleteById:
-    getAthleteById,
-
-
-  selectSport:
-    selectSport,
-
-
-  setAnalysisMode:
-    setAnalysisMode,
-
-
-  getAnalysisById:
-    getAnalysisById,
-
-
-  getAthleteAnalyses:
-    getAthleteAnalyses,
-
-
-  addAnalysis:
-    addAnalysis,
-
-
-  deleteAnalysis:
-    deleteAnalysis,
-
-
-  addReport:
-    addReport,
-
-
-  refreshDashboard:
-    refreshDashboard,
-
-
-  refreshSelectedAthleteUI:
-    refreshSelectedAthleteUI,
-
-
-  refreshAnalysisHeader:
-    refreshAnalysisHeader,
-
-
-  getBasicSystemStatus:
-    getBasicSystemStatus,
-
-
-  saveAthletes:
-    saveAthletes,
-
-
-  saveAnalyses:
-    saveAnalyses,
-
-
-  saveReports:
-    saveReports
-
-};
-
-
-/* ============================================================
-   56. INITIALIZE APP
-============================================================ */
-
-function initializeApp() {
-
-  if (
-    AppState.initialized
-  ) {
-
-    return;
-
-  }
-
-
-  AppState.initialized =
-    true;
-
-
-  /*
-    LOAD DATA
-  */
-
-  loadAppData();
-
-
-  /*
-    RESTORE ATHLETE SPORT
-  */
-
-  restoreAthleteSport();
-
-
-  /*
-    CORE EVENTS
-  */
-
-  initializeNavigation();
-
-  initializeMobileSidebar();
-
-  initializeAnalysisModes();
-
-  initializeQuickActions();
-
-  initializeRecordOpening();
-
-  initializeGlobalEvents();
-
-  initializeAnalysisActions();
-
-  initializeReportNavigation();
-
-  initializeReportPrint();
-
-  initializeAthleteSelectionButtons();
-
-  initializeAthleteAnalysisButtons();
-
-  initializeSportSelection();
-
-  initializeAnalysisVideoControls();
-
-  initializeVideoUpload();
-
-  initializePlaybackRate();
-
-  initializeVideoProgress();
-
-  initializeThreeDToggle();
-
-  initializeStorageSync();
-
-  initializeKeyboardShortcuts();
-
-  initializeResizeHandler();
-
-  initializeSafetyEvents();
-
-
-  /*
-    UI REFRESH
-  */
-
-  refreshSelectedAthleteUI();
-
-  refreshAnalysisHeader();
-
-  refreshDashboard();
-
-
-  /*
-    DEFAULT ANALYSIS MODE
-  */
-
-  setAnalysisMode(
-    AppState.analysisMode
-  );
-
-
-  /*
-    SYSTEM CHECK
-  */
-
-  initializeSystemStatus();
-
-
-  /*
-    MODULE INITIALIZATION
-
-    각 파일이 존재할 경우에만 실행된다.
-  */
-
-  callModule(
-    "AthleteManager",
-    "init"
-  );
-
-
-  callModule(
-    "SportsManager",
-    "init"
-  );
-
-
-  callModule(
-    "MotionAnalysis",
-    "init"
-  );
-
-
-  callModule(
-    "RecordsManager",
-    "init"
-  );
-
-
-  callModule(
-    "ReportManager",
-    "init"
-  );
-
-
-  callModule(
-    "SystemCheck",
-    "init"
-  );
-
-
-  /*
-    INITIAL PAGE
-  */
-
-  navigateTo(
-    "dashboard",
-    {
-      scrollTop:
-        false
     }
-  );
+
+
+    if (appShell) {
+
+      appShell.hidden =
+        true;
+
+    }
+
+  }
+
+
+  dispatchReadyEvent();
 
 
   console.log(
-    `%c${APP_CONFIG.name}`,
-    `
-      color:#65cfff;
-      font-size:16px;
-      font-weight:bold;
-    `
-  );
-
-
-  console.log(
-    "VERSION:",
-    APP_CONFIG.version
-  );
-
-
-  console.log(
-    "SYSTEM READY"
+    `${APP_CONFIG.name} ${APP_CONFIG.version} READY`
   );
 
 }
 
 
-/* ============================================================
-   57. DOM READY
-============================================================ */
 
 if (
   document.readyState ===
@@ -3770,53 +3446,62 @@ if (
 
   document.addEventListener(
     "DOMContentLoaded",
-    initializeApp
+    initializeApplication
   );
 
 }
 
 else {
 
-  initializeApp();
+  initializeApplication();
 
 }
 
 
-/* ============================================================
-   58. APP READY EVENT
-============================================================ */
+/* =========================================================
+   23. PUBLIC API
+========================================================= */
 
-window.addEventListener(
-  "load",
-  () => {
+window.SeolcheonCore = {
 
-    window.dispatchEvent(
-      new CustomEvent(
-        "seolcheon:app-ready",
-        {
-          detail: {
+  config:
+    APP_CONFIG,
 
-            version:
-              APP_CONFIG.version,
+  state:
+    AppState,
 
-            athleteCount:
-              AppState.athletes.length,
+  sports:
+    SPORTS_DATABASE,
 
-            analysisCount:
-              AppState.analyses.length,
+  getSelectedAthlete,
 
-            reportCount:
-              AppState.reports.length
+  getAthleteById,
 
-          }
-        }
-      )
-    );
+  getSportById,
 
-  }
-);
+  selectAthlete,
+
+  createAnalysisRecord,
+
+  createReportRecord,
+
+  renderDashboard,
+
+  renderRecords,
+
+  renderAthletes,
+
+  saveAthletes,
+
+  saveAnalyses,
+
+  saveReports,
+
+  navigateTo
+
+};
 
 
-/* ============================================================
-   END APP.JS
-============================================================ */
+/* =========================================================
+   END OF APP.JS
+========================================================= */
