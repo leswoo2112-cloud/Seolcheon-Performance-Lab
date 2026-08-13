@@ -1,66 +1,83 @@
-/* ============================================================
+/* =========================================================
    SEOLCHEON SPORTS PERFORMANCE LAB
    REPORT.JS
-   6 / 6
+   FILE 6 / 6
 
-   담당 기능
-   - 분석 결과 리포트
-   - 선수 정보
-   - 종합 점수
-   - 육각형 레이더 그래프
-   - 분석 이미지
-   - 관절각
-   - 종목별 데이터
-   - 구간 분석
-   - 기술 분석
-   - 3D 분석
-   - 엘리트 비교
-   - 자동 피드백
-   - 추천 훈련
-   - 분석 기록
-   - 기록 불러오기
-   - 기록 삭제
-   - PDF / 인쇄
-   - 대시보드 기록 연동
-============================================================ */
+   PERFORMANCE REPORT ENGINE
+   ---------------------------------------------------------
+   - Athlete Information
+   - Overall Score
+   - Radar / Hexagon Chart
+   - Analysis Images
+   - Joint Angles
+   - Sport Specific Metrics
+   - Technique Analysis
+   - Segment Analysis
+   - 3D Analysis
+   - Elite Comparison
+   - Feedback
+   - Training Recommendations
+   - Analysis Record Loading
+   - Print / PDF
+========================================================= */
 
 "use strict";
 
 
-/* ============================================================
+/* =========================================================
    01. REPORT STATE
-============================================================ */
+========================================================= */
 
 const ReportState = {
 
-  currentReport: null,
+  currentRecord:
+    null,
 
-  radarChart: null
+  radarChart:
+    null,
+
+  rendered:
+    false
 
 };
 
 
-/* ============================================================
-   02. HELPERS
-============================================================ */
+window.SeolcheonReportState =
+  ReportState;
 
-function reportQuery(selector) {
 
-  return document.querySelector(selector);
+
+/* =========================================================
+   02. BASIC HELPERS
+========================================================= */
+
+function reportQuery(
+  selector
+) {
+
+  return document.querySelector(
+    selector
+  );
 
 }
 
 
-function reportQueryAll(selector) {
+
+function reportQueryAll(
+  selector
+) {
 
   return [
-    ...document.querySelectorAll(selector)
+    ...document.querySelectorAll(
+      selector
+    )
   ];
 
 }
 
 
-function safeValue(
+
+function safeText(
   value,
   fallback = "-"
 ) {
@@ -75,60 +92,91 @@ function safeValue(
 
   }
 
-  return value;
+
+  return String(
+    value
+  );
 
 }
 
 
-function escapeReportHTML(value) {
 
-  return String(
-    value ?? ""
+function safeNumber(
+  value,
+  fallback = 0
+) {
+
+  const number =
+    Number(
+      value
+    );
+
+
+  return Number.isFinite(
+    number
   )
+    ? number
+    : fallback;
 
-    .replaceAll(
-      "&",
+}
+
+
+
+function escapeReportHTML(
+  value
+) {
+
+  return safeText(
+    value,
+    ""
+  )
+    .replace(
+      /&/g,
       "&amp;"
     )
-
-    .replaceAll(
-      "<",
+    .replace(
+      /</g,
       "&lt;"
     )
-
-    .replaceAll(
-      ">",
+    .replace(
+      />/g,
       "&gt;"
     )
-
-    .replaceAll(
-      '"',
+    .replace(
+      /"/g,
       "&quot;"
     )
-
-    .replaceAll(
-      "'",
+    .replace(
+      /'/g,
       "&#039;"
     );
 
 }
 
 
-/* ============================================================
-   03. DATE
-============================================================ */
 
-function formatReportDate(dateValue) {
+/* =========================================================
+   03. DATE FORMAT
+========================================================= */
 
-  if (!dateValue) {
+function formatReportDate(
+  value
+) {
 
-    return "-";
+  if (!value) {
+
+    return new Date()
+      .toLocaleString(
+        "ko-KR"
+      );
 
   }
 
 
   const date =
-    new Date(dateValue);
+    new Date(
+      value
+    );
 
 
   if (
@@ -137,507 +185,443 @@ function formatReportDate(dateValue) {
     )
   ) {
 
-    return dateValue;
+    return safeText(
+      value
+    );
 
   }
 
 
   return date.toLocaleString(
-    "ko-KR",
-    {
-
-      year: "numeric",
-
-      month: "2-digit",
-
-      day: "2-digit",
-
-      hour: "2-digit",
-
-      minute: "2-digit"
-
-    }
+    "ko-KR"
   );
 
 }
 
 
-/* ============================================================
-   04. MODE NAME
-============================================================ */
 
-function getModeName(mode) {
+/* =========================================================
+   04. LABEL DATABASE
+========================================================= */
 
-  const names = {
+const REPORT_METRIC_LABELS = {
 
-    realtime:
-      "실시간 카메라 분석",
+  shoulderWidth:
+    "어깨 폭",
 
-    video:
-      "영상 분석"
+  hipWidth:
+    "골반 폭",
 
-  };
+  symmetry:
+    "좌우 대칭",
 
+  kneeAverage:
+    "평균 무릎각",
 
-  return (
-    names[mode] ||
-    mode ||
-    "-"
-  );
+  hipAverage:
+    "평균 고관절각",
 
-}
+  cadence:
+    "케이던스",
 
+  movementSpeed:
+    "동작 속도",
 
-/* ============================================================
-   05. ANGLE NAME
-============================================================ */
+  bodyStability:
+    "몸통 안정성",
 
-function getAngleName(key) {
+  rangeOfMotion:
+    "가동범위",
 
-  const names = {
+  poleTiming:
+    "폴링 타이밍",
 
-    leftKnee:
-      "왼쪽 무릎",
+  glide:
+    "글라이드",
 
-    rightKnee:
-      "오른쪽 무릎",
+  techniqueTransition:
+    "기술 전환",
 
-    leftHip:
-      "왼쪽 고관절",
+  slope:
+    "경사",
 
-    rightHip:
-      "오른쪽 고관절",
+  elevationGain:
+    "상승 고도",
 
-    leftElbow:
-      "왼쪽 팔꿈치",
+  distance:
+    "이동 거리",
 
-    rightElbow:
-      "오른쪽 팔꿈치",
+  segmentTime:
+    "구간 시간",
 
-    trunk:
-      "상체",
+  time:
+    "기록",
 
-    ankle:
-      "발목",
+  strideLength:
+    "보폭",
 
-    shoulder:
-      "어깨"
+  groundContactTime:
+    "접지 시간",
 
-  };
+  horizontalDeviation:
+    "수평 편차",
 
+  peakVelocity:
+    "최대 속도",
 
-  return (
-    names[key] ||
-    key
-  );
+  firstPull:
+    "1차 풀",
 
-}
+  secondPull:
+    "2차 풀",
 
+  posturalSway:
+    "자세 흔들림",
 
-/* ============================================================
-   06. METRIC NAME
-============================================================ */
+  shoulderStability:
+    "어깨 안정성",
 
-function getMetricName(key) {
+  balance:
+    "균형"
 
-  const names = {
+};
 
-    speed:
-      "속도",
 
-    cadence:
-      "케이던스",
 
-    strideLength:
-      "보폭",
+const REPORT_ANGLE_LABELS = {
 
-    groundContactTime:
-      "접지시간",
+  leftElbow:
+    "왼쪽 팔꿈치",
 
-    glide:
-      "글라이드",
+  rightElbow:
+    "오른쪽 팔꿈치",
 
-    poleTiming:
-      "폴링 타이밍",
+  leftHip:
+    "왼쪽 고관절",
 
-    slope:
-      "경사도",
+  rightHip:
+    "오른쪽 고관절",
 
-    elevationGain:
-      "상승고도",
+  leftKnee:
+    "왼쪽 무릎",
 
-    distance:
-      "이동 거리",
+  rightKnee:
+    "오른쪽 무릎",
 
-    segmentTime:
-      "구간 시간",
+  leftAnkle:
+    "왼쪽 발목",
 
-    horizontalDeviation:
-      "수평 편차",
+  rightAnkle:
+    "오른쪽 발목"
 
-    peakVelocity:
-      "최대 속도",
+};
 
-    firstPull:
-      "1차 풀",
 
-    secondPull:
-      "2차 풀",
 
-    techniqueTransition:
-      "기술 전환",
+const REPORT_SCORE_LABELS = {
 
-    time:
-      "기록"
+  posture:
+    "자세 안정성",
 
-  };
+  symmetry:
+    "좌우 대칭",
 
+  technique:
+    "기술 수행",
 
-  return (
-    names[key] ||
-    key
-  );
+  stability:
+    "동작 안정성",
 
-}
+  efficiency:
+    "효율성",
 
+  elite:
+    "엘리트 근접도"
 
-/* ============================================================
-   07. METRIC UNIT
-============================================================ */
+};
 
-function getMetricUnit(key) {
 
-  const units = {
 
-    speed:
-      "km/h",
+/* =========================================================
+   05. NORMALIZE RECORD
+========================================================= */
 
-    cadence:
-      "spm",
-
-    strideLength:
-      "m",
-
-    groundContactTime:
-      "ms",
-
-    glide:
-      "m",
-
-    poleTiming:
-      "ms",
-
-    slope:
-      "%",
-
-    elevationGain:
-      "m",
-
-    distance:
-      "m",
-
-    segmentTime:
-      "s",
-
-    horizontalDeviation:
-      "cm",
-
-    peakVelocity:
-      "m/s",
-
-    firstPull:
-      "s",
-
-    secondPull:
-      "s"
-
-  };
-
-
-  return (
-    units[key] ||
-    ""
-  );
-
-}
-
-
-/* ============================================================
-   08. SCORE LEVEL
-============================================================ */
-
-function getScoreLevel(score) {
-
-  const value =
-    Number(score) || 0;
-
-
-  if (
-    value >= 90
-  ) {
-
-    return "EXCELLENT";
-
-  }
-
-
-  if (
-    value >= 80
-  ) {
-
-    return "VERY GOOD";
-
-  }
-
-
-  if (
-    value >= 70
-  ) {
-
-    return "GOOD";
-
-  }
-
-
-  if (
-    value >= 60
-  ) {
-
-    return "DEVELOPING";
-
-  }
-
-
-  return "NEEDS IMPROVEMENT";
-
-}
-
-
-/* ============================================================
-   09. SET TEXT
-============================================================ */
-
-function setReportText(
-  selector,
-  value
+function normalizeReportRecord(
+  input
 ) {
 
-  const element =
-    reportQuery(selector);
-
-
-  if (element) {
-
-    element.textContent =
-      safeValue(value);
-
-  }
-
-}
-
-
-/* ============================================================
-   10. LOAD REPORT
-============================================================ */
-
-function loadReport(report) {
-
-  if (!report) {
-
-    return;
-
-  }
-
-
-  ReportState.currentReport =
-    report;
-
-
-  if (
-    window.SeolcheonApp?.state
-  ) {
-
-    window.SeolcheonApp
-      .state
-      .currentReport =
-      report;
-
-  }
-
-
-  renderReport(report);
-
-}
-
-
-/* ============================================================
-   11. MAIN REPORT RENDER
-============================================================ */
-
-function renderReport(report) {
-
-  renderReportHeader(
-    report
-  );
-
-
-  renderReportScores(
-    report
-  );
-
-
-  renderRadarChart(
-    report
-  );
-
-
-  renderReportImages(
-    report
-  );
-
-
-  renderReportAngles(
-    report
-  );
-
-
-  renderSportData(
-    report
-  );
-
-
-  renderReportSegments(
-    report
-  );
-
-
-  renderTechniqueAnalysis(
-    report
-  );
-
-
-  renderThreeDAnalysis(
-    report
-  );
-
-
-  renderEliteReport(
-    report
-  );
-
-
-  renderFeedback(
-    report
-  );
-
-
-  renderTraining(
-    report
-  );
-
-}
-
-
-/* ============================================================
-   12. HEADER
-============================================================ */
-
-function renderReportHeader(
-  report
-) {
-
-  setReportText(
-    "[data-report-title]",
-    `${safeValue(
-      report.sportName,
-      "SPORT"
-    )} PERFORMANCE REPORT`
-  );
-
-
-  setReportText(
-    "[data-report-overall]",
-    safeValue(
-      report.overall,
-      "--"
-    )
-  );
-
-
-  setReportText(
-    "[data-report-athlete]",
-    report.athleteName
-  );
-
-
-  setReportText(
-    "[data-report-school]",
-    report.school ||
-    "설천고"
-  );
-
-
-  setReportText(
-    "[data-report-grade]",
-    report.grade
-  );
-
-
-  setReportText(
-    "[data-report-sport]",
-    report.sportName
-  );
-
-
-  setReportText(
-    "[data-report-mode]",
-    getModeName(
-      report.mode
-    )
-  );
-
-
-  setReportText(
-    "[data-report-date]",
-    formatReportDate(
-      report.createdAt
-    )
-  );
-
-}
-
-
-/* ============================================================
-   13. SCORE GRID
-============================================================ */
-
-function renderReportScores(
-  report
-) {
-
-  const scores =
-    report.scores ||
+  const analysis =
+    window.SeolcheonAnalysisState ||
     {};
 
 
+  const state =
+    window.SeolcheonState ||
+    {};
+
+
+  const selectedAthlete =
+    state.selectedAthlete ||
+    state.currentAthlete ||
+    null;
+
+
+  const record =
+    input ||
+    ReportState.currentRecord ||
+    {};
+
+
+  const athlete =
+    record.athlete ||
+    selectedAthlete ||
+    {};
+
+
+  const selectedSport =
+    analysis.selectedSport ||
+    {};
+
+
+  const trainingFromEngine =
+    window.SeolcheonTraining
+      ?.getForReport?.() ||
+    analysis.training ||
+    [];
+
+
+  return {
+
+    id:
+      record.id ||
+      `report_${Date.now()}`,
+
+    createdAt:
+      record.createdAt ||
+      record.date ||
+      new Date()
+        .toISOString(),
+
+    athlete: {
+
+      id:
+        athlete.id ||
+        record.athleteId ||
+        null,
+
+      name:
+        athlete.name ||
+        record.athleteName ||
+        state.selectedAthleteName ||
+        "선택 없음",
+
+      school:
+        athlete.school ||
+        record.school ||
+        "설천고",
+
+      grade:
+        athlete.grade ||
+        record.grade ||
+        "-",
+
+      sport:
+        athlete.sportName ||
+        athlete.sport ||
+        record.sportName ||
+        selectedSport.name ||
+        state.selectedSportName ||
+        "-",
+
+      event:
+        athlete.event ||
+        record.event ||
+        "-",
+
+      team:
+        athlete.team ||
+        record.team ||
+        "설천고"
+
+    },
+
+    sportId:
+      record.sportId ||
+      selectedSport.id ||
+      state.selectedSportId ||
+      null,
+
+    sportName:
+      record.sportName ||
+      selectedSport.name ||
+      athlete.sportName ||
+      athlete.sport ||
+      state.selectedSportName ||
+      "-",
+
+    mode:
+      record.mode ||
+      analysis.mode ||
+      "-",
+
+    overallScore:
+      safeNumber(
+        record.overallScore ??
+        analysis.overallScore,
+        0
+      ),
+
+    scores: {
+
+      posture:
+        safeNumber(
+          record.scores?.posture ??
+          analysis.scores?.posture
+        ),
+
+      symmetry:
+        safeNumber(
+          record.scores?.symmetry ??
+          analysis.scores?.symmetry
+        ),
+
+      technique:
+        safeNumber(
+          record.scores?.technique ??
+          analysis.scores?.technique
+        ),
+
+      stability:
+        safeNumber(
+          record.scores?.stability ??
+          analysis.scores?.stability
+        ),
+
+      efficiency:
+        safeNumber(
+          record.scores?.efficiency ??
+          analysis.scores?.efficiency
+        ),
+
+      elite:
+        safeNumber(
+          record.scores?.elite ??
+          analysis.scores?.elite
+        )
+
+    },
+
+    angles:
+      record.angles ||
+      analysis.angles ||
+      {},
+
+    metrics:
+      record.metrics ||
+      analysis.metrics ||
+      {},
+
+    technique:
+      record.technique ||
+      analysis.currentTechnique ||
+      "--",
+
+    transitions:
+      record.transitions ||
+      analysis.techniqueTransitions ||
+      [],
+
+    segments:
+      record.segments ||
+      analysis.segments ||
+      [],
+
+    problems:
+      record.problems ||
+      analysis.problems ||
+      [],
+
+    feedback:
+      record.feedback ||
+      analysis.feedback ||
+      [],
+
+    training:
+      record.training?.length
+        ? record.training
+        : trainingFromEngine,
+
+    images: {
+
+      snapshot:
+        record.images?.snapshot ||
+        analysis.snapshot ||
+        null,
+
+      pose:
+        record.images?.pose ||
+        analysis.poseImage ||
+        null,
+
+      angles:
+        record.images?.angles ||
+        analysis.angleImage ||
+        null,
+
+      trajectory:
+        record.images?.trajectory ||
+        analysis.trajectoryImage ||
+        null,
+
+      threeD:
+        record.images?.threeD ||
+        analysis.threeDImage ||
+        null
+
+    },
+
+    threeD:
+      record.threeD ||
+      {
+
+        enabled:
+          analysis.viewMode ===
+          "3d",
+
+        landmarkCount:
+          analysis.worldLandmarks
+            ?.length ||
+          0
+
+      }
+
+  };
+
+}
+
+
+
+/* =========================================================
+   06. SET TEXT
+========================================================= */
+
+function setReportText(
+  selector,
+  value,
+  fallback = "-"
+) {
+
   reportQueryAll(
-    "[data-report-score]"
+    selector
   )
     .forEach(
       element => {
 
-        const key =
-          element.dataset
-            .reportScore;
-
-
-        const score =
-          scores[key];
-
-
         element.textContent =
-          score ??
-          "--";
+          safeText(
+            value,
+            fallback
+          );
 
       }
     );
@@ -645,12 +629,133 @@ function renderReportScores(
 }
 
 
-/* ============================================================
-   14. RADAR CHART
-============================================================ */
 
-function renderRadarChart(
-  report
+/* =========================================================
+   07. REPORT HEADER
+========================================================= */
+
+function renderReportHeader(
+  record
+) {
+
+  setReportText(
+    "[data-report-title]",
+    `${record.sportName} 퍼포먼스 분석 리포트`
+  );
+
+
+  setReportText(
+    "[data-report-overall]",
+    Math.round(
+      record.overallScore
+    )
+  );
+
+
+  setReportText(
+    "[data-report-athlete]",
+    record.athlete.name
+  );
+
+
+  setReportText(
+    "[data-report-school]",
+    record.athlete.school
+  );
+
+
+  setReportText(
+    "[data-report-grade]",
+    record.athlete.grade
+  );
+
+
+  setReportText(
+    "[data-report-sport]",
+    record.sportName
+  );
+
+
+  const modeLabel =
+
+    record.mode ===
+    "realtime"
+
+      ? "실시간 카메라"
+
+      : record.mode ===
+        "video"
+
+        ? "영상 분석"
+
+        : safeText(
+            record.mode
+          );
+
+
+  setReportText(
+    "[data-report-mode]",
+    modeLabel
+  );
+
+
+  setReportText(
+    "[data-report-date]",
+    formatReportDate(
+      record.createdAt
+    )
+  );
+
+}
+
+
+
+/* =========================================================
+   08. SCORE GRID
+========================================================= */
+
+function renderReportScores(
+  record
+) {
+
+  Object.entries(
+    record.scores
+  )
+    .forEach(
+      ([key, value]) => {
+
+        const elements =
+          reportQueryAll(
+            `[data-report-score="${key}"]`
+          );
+
+
+        elements.forEach(
+          element => {
+
+            element.textContent =
+              Math.round(
+                safeNumber(
+                  value
+                )
+              );
+
+          }
+        );
+
+      }
+    );
+
+}
+
+
+
+/* =========================================================
+   09. RADAR CHART
+========================================================= */
+
+function renderReportRadar(
+  record
 ) {
 
   const canvas =
@@ -667,50 +772,111 @@ function renderRadarChart(
 
 
   if (
+    ReportState.radarChart
+  ) {
+
+    try {
+
+      ReportState.radarChart
+        .destroy();
+
+    }
+
+    catch (error) {
+
+      console.warn(
+        error
+      );
+
+    }
+
+
+    ReportState.radarChart =
+      null;
+
+  }
+
+
+  if (
     typeof Chart ===
     "undefined"
   ) {
 
-    console.warn(
-      "[REPORT] Chart.js not loaded"
-    );
+    const parent =
+      canvas.parentElement;
+
+
+    if (parent) {
+
+      const fallback =
+        document.createElement(
+          "div"
+        );
+
+
+      fallback.className =
+        "report-chart-fallback";
+
+
+      fallback.innerHTML =
+        Object.entries(
+          record.scores
+        )
+          .map(
+            ([key, value]) => `
+
+              <div>
+
+                <span>
+                  ${REPORT_SCORE_LABELS[key] || key}
+                </span>
+
+                <strong>
+                  ${Math.round(
+                    safeNumber(
+                      value
+                    )
+                  )}
+                </strong>
+
+              </div>
+
+            `
+          )
+          .join("");
+
+
+      canvas.hidden =
+        true;
+
+
+      parent.appendChild(
+        fallback
+      );
+
+    }
+
 
     return;
 
   }
 
 
-  const scores =
-    report.scores ||
-    {};
-
-
   const values = [
 
-    scores.posture || 0,
+    record.scores.posture,
 
-    scores.symmetry || 0,
+    record.scores.symmetry,
 
-    scores.technique || 0,
+    record.scores.technique,
 
-    scores.stability || 0,
+    record.scores.stability,
 
-    scores.efficiency || 0,
+    record.scores.efficiency,
 
-    scores.elite || 0
+    record.scores.elite
 
   ];
-
-
-  if (
-    ReportState.radarChart
-  ) {
-
-    ReportState
-      .radarChart
-      .destroy();
-
-  }
 
 
   ReportState.radarChart =
@@ -756,16 +922,16 @@ function renderRadarChart(
                 4,
 
               pointHoverRadius:
-                6,
+                5,
 
               backgroundColor:
-                "rgba(0, 210, 255, 0.16)",
+                "rgba(36, 197, 255, 0.14)",
 
               borderColor:
-                "rgba(0, 220, 255, 0.95)",
+                "rgba(36, 197, 255, 0.95)",
 
               pointBackgroundColor:
-                "#ffffff"
+                "rgba(255, 225, 90, 1)"
 
             }
 
@@ -781,12 +947,8 @@ function renderRadarChart(
           maintainAspectRatio:
             false,
 
-          animation: {
-
-            duration:
-              500
-
-          },
+          animation:
+            false,
 
           plugins: {
 
@@ -817,37 +979,34 @@ function renderRadarChart(
                 stepSize:
                   20,
 
-                backdropColor:
-                  "transparent",
-
-                color:
-                  "#8093a8"
+                display:
+                  false
 
               },
 
               grid: {
 
                 color:
-                  "rgba(130,160,190,.18)"
+                  "rgba(130, 170, 205, 0.22)"
 
               },
 
               angleLines: {
 
                 color:
-                  "rgba(130,160,190,.18)"
+                  "rgba(130, 170, 205, 0.22)"
 
               },
 
               pointLabels: {
 
                 color:
-                  "#dbe7f3",
+                  "#d8e8f5",
 
                 font: {
 
                   size:
-                    12,
+                    11,
 
                   weight:
                     "600"
@@ -868,95 +1027,127 @@ function renderRadarChart(
 }
 
 
-/* ============================================================
-   15. REPORT IMAGES
-============================================================ */
 
-function renderReportImages(
-  report
+/* =========================================================
+   10. REPORT IMAGES
+========================================================= */
+
+function renderSingleReportImage(
+  key,
+  source
 ) {
 
-  const images =
-    report.snapshots ||
-    {};
-
-
-  reportQueryAll(
-    "[data-report-image]"
-  )
-    .forEach(
-      image => {
-
-        const key =
-          image.dataset
-            .reportImage;
-
-
-        const source =
-          images[key];
-
-
-        const frame =
-          image.closest(
-            ".report-image-frame"
-          );
-
-
-        const empty =
-          frame?.querySelector(
-            "[data-image-empty]"
-          );
-
-
-        if (source) {
-
-          image.src =
-            source;
-
-          image.hidden =
-            false;
-
-
-          if (empty) {
-
-            empty.hidden =
-              true;
-
-          }
-
-        }
-
-        else {
-
-          image.removeAttribute(
-            "src"
-          );
-
-          image.hidden =
-            true;
-
-
-          if (empty) {
-
-            empty.hidden =
-              false;
-
-          }
-
-        }
-
-      }
+  const image =
+    reportQuery(
+      `[data-report-image="${key}"]`
     );
+
+
+  if (!image) {
+
+    return;
+
+  }
+
+
+  const frame =
+    image.closest(
+      ".report-image-frame"
+    );
+
+
+  const empty =
+    frame?.querySelector(
+      "[data-image-empty]"
+    );
+
+
+  if (source) {
+
+    image.src =
+      source;
+
+
+    image.hidden =
+      false;
+
+
+    if (empty) {
+
+      empty.hidden =
+        true;
+
+    }
+
+  }
+
+  else {
+
+    image.removeAttribute(
+      "src"
+    );
+
+
+    image.hidden =
+      true;
+
+
+    if (empty) {
+
+      empty.hidden =
+        false;
+
+    }
+
+  }
 
 }
 
 
-/* ============================================================
-   16. ANGLES
-============================================================ */
+
+function renderReportImages(
+  record
+) {
+
+  renderSingleReportImage(
+    "snapshot",
+    record.images.snapshot
+  );
+
+
+  renderSingleReportImage(
+    "pose",
+    record.images.pose
+  );
+
+
+  renderSingleReportImage(
+    "angles",
+    record.images.angles
+  );
+
+
+  renderSingleReportImage(
+    "trajectory",
+    record.images.trajectory
+  );
+
+
+  renderSingleReportImage(
+    "threeD",
+    record.images.threeD
+  );
+
+}
+
+
+
+/* =========================================================
+   11. JOINT ANGLES
+========================================================= */
 
 function renderReportAngles(
-  report
+  record
 ) {
 
   const container =
@@ -972,28 +1163,25 @@ function renderReportAngles(
   }
 
 
-  const angles =
-    report.angles ||
-    {};
-
-
   const entries =
     Object.entries(
-      angles
+      record.angles ||
+      {}
     );
 
 
-  if (
-    entries.length === 0
-  ) {
+  if (!entries.length) {
 
     container.innerHTML = `
 
       <div class="empty-state">
+
         관절각 데이터가 없습니다.
+
       </div>
 
     `;
+
 
     return;
 
@@ -1009,13 +1197,16 @@ function renderReportAngles(
 
             <span>
               ${escapeReportHTML(
-                getAngleName(key)
+                REPORT_ANGLE_LABELS[key] ||
+                key
               )}
             </span>
 
             <strong>
-              ${escapeReportHTML(
-                value
+              ${Math.round(
+                safeNumber(
+                  value
+                )
               )}°
             </strong>
 
@@ -1028,12 +1219,13 @@ function renderReportAngles(
 }
 
 
-/* ============================================================
-   17. SPORT DATA
-============================================================ */
 
-function renderSportData(
-  report
+/* =========================================================
+   12. SPORT DATA
+========================================================= */
+
+function renderReportSportData(
+  record
 ) {
 
   const container =
@@ -1049,28 +1241,25 @@ function renderSportData(
   }
 
 
-  const metrics =
-    report.metrics ||
-    {};
-
-
   const entries =
     Object.entries(
-      metrics
+      record.metrics ||
+      {}
     );
 
 
-  if (
-    entries.length === 0
-  ) {
+  if (!entries.length) {
 
     container.innerHTML = `
 
       <div class="empty-state">
+
         종목별 분석 데이터가 없습니다.
+
       </div>
 
     `;
+
 
     return;
 
@@ -1080,54 +1269,39 @@ function renderSportData(
   container.innerHTML =
     entries
       .map(
-        ([key, value]) => {
+        ([key, value]) => `
 
-          const unit =
-            getMetricUnit(
-              key
-            );
+          <div class="report-data-card">
 
+            <span>
+              ${escapeReportHTML(
+                REPORT_METRIC_LABELS[key] ||
+                key
+              )}
+            </span>
 
-          return `
+            <strong>
+              ${escapeReportHTML(
+                value
+              )}
+            </strong>
 
-            <div class="report-data-card">
+          </div>
 
-              <span>
-                ${escapeReportHTML(
-                  getMetricName(key)
-                )}
-              </span>
-
-              <strong>
-                ${escapeReportHTML(
-                  value
-                )}
-
-                ${
-                  unit
-                    ? `<small>${unit}</small>`
-                    : ""
-                }
-
-              </strong>
-
-            </div>
-
-          `;
-
-        }
+        `
       )
       .join("");
 
 }
 
 
-/* ============================================================
-   18. SEGMENTS
-============================================================ */
+
+/* =========================================================
+   13. SEGMENTS
+========================================================= */
 
 function renderReportSegments(
-  report
+  record
 ) {
 
   const container =
@@ -1144,21 +1318,27 @@ function renderReportSegments(
 
 
   const segments =
-    report.segments ||
-    [];
+    Array.isArray(
+      record.segments
+    )
+      ? record.segments
+      : [];
 
 
   if (
-    segments.length === 0
+    !segments.length
   ) {
 
     container.innerHTML = `
 
       <div class="empty-state">
-        구간 분석 데이터가 없습니다.
+
+        저장된 구간 분석 데이터가 없습니다.
+
       </div>
 
     `;
+
 
     return;
 
@@ -1169,7 +1349,7 @@ function renderReportSegments(
 
     <div class="report-segment-table">
 
-      <div class="report-segment-head">
+      <div class="report-segment-row header">
 
         <span>
           구간
@@ -1194,51 +1374,52 @@ function renderReportSegments(
       </div>
 
 
-      ${
+      ${segments
+        .map(
+          (segment, index) => `
 
-        segments
-          .map(
-            segment => `
+            <div class="report-segment-row">
 
-              <div class="report-segment-row">
+              <strong>
+                ${escapeReportHTML(
+                  segment.name ||
+                  `${index + 1}구간`
+                )}
+              </strong>
 
-                <span>
-                  ${escapeReportHTML(
-                    segment.segment
-                  )}
-                </span>
+              <span>
+                ${escapeReportHTML(
+                  segment.distance ||
+                  "-"
+                )}
+              </span>
 
-                <span>
-                  ${escapeReportHTML(
-                    segment.distance
-                  )}m
-                </span>
+              <span>
+                ${escapeReportHTML(
+                  segment.time ||
+                  "-"
+                )}
+              </span>
 
-                <span>
-                  ${escapeReportHTML(
-                    segment.time
-                  )}s
-                </span>
+              <span>
+                ${escapeReportHTML(
+                  segment.technique ||
+                  "-"
+                )}
+              </span>
 
-                <span>
-                  ${escapeReportHTML(
-                    segment.technique
-                  )}
-                </span>
+              <span>
+                ${escapeReportHTML(
+                  segment.slope ||
+                  "-"
+                )}
+              </span>
 
-                <span>
-                  ${escapeReportHTML(
-                    segment.slope
-                  )}%
-                </span>
+            </div>
 
-              </div>
-
-            `
-          )
-          .join("")
-
-      }
+          `
+        )
+        .join("")}
 
     </div>
 
@@ -1247,25 +1428,26 @@ function renderReportSegments(
 }
 
 
-/* ============================================================
-   19. TECHNIQUE
-============================================================ */
 
-function renderTechniqueAnalysis(
-  report
+/* =========================================================
+   14. TECHNIQUE
+========================================================= */
+
+function renderReportTechnique(
+  record
 ) {
 
   setReportText(
     "[data-report-current-technique]",
-    report.technique ||
-    "-"
+    record.technique,
+    "--"
   );
 
 
   setReportText(
     "[data-report-transition-count]",
-    report.transitionCount ??
-    0
+    record.transitions.length,
+    "0"
   );
 
 
@@ -1282,24 +1464,63 @@ function renderTechniqueAnalysis(
   }
 
 
-  const sport =
-    window.SportsDatabase
-      ?.getSport?.(
-        report.sport
-      );
-
-
-  const techniques =
-    sport?.techniques ||
-    [];
+  const techniqueNames =
+    new Set();
 
 
   if (
-    techniques.length === 0
+    record.technique &&
+    record.technique !==
+    "--"
   ) {
 
-    container.innerHTML =
-      "";
+    techniqueNames.add(
+      record.technique
+    );
+
+  }
+
+
+  record.transitions.forEach(
+    transition => {
+
+      if (
+        transition.from
+      ) {
+
+        techniqueNames.add(
+          transition.from
+        );
+
+      }
+
+
+      if (
+        transition.to
+      ) {
+
+        techniqueNames.add(
+          transition.to
+        );
+
+      }
+
+    }
+  );
+
+
+  if (
+    !techniqueNames.size
+  ) {
+
+    container.innerHTML = `
+
+      <span class="report-chip">
+        분석 데이터 없음
+      </span>
+
+    `;
+
 
     return;
 
@@ -1307,24 +1528,18 @@ function renderTechniqueAnalysis(
 
 
   container.innerHTML =
-    techniques
+    [
+      ...techniqueNames
+    ]
       .map(
         technique => `
 
-          <span
-            class="
-              report-technique-chip
-              ${
-                technique ===
-                report.technique
-                  ? "active"
-                  : ""
-              }
-            "
-          >
+          <span class="report-chip">
+
             ${escapeReportHTML(
               technique
             )}
+
           </span>
 
         `
@@ -1334,12 +1549,13 @@ function renderTechniqueAnalysis(
 }
 
 
-/* ============================================================
-   20. 3D ANALYSIS
-============================================================ */
 
-function renderThreeDAnalysis(
-  report
+/* =========================================================
+   15. 3D BIOMECHANICS
+========================================================= */
+
+function renderReport3D(
+  record
 ) {
 
   const container =
@@ -1355,24 +1571,19 @@ function renderThreeDAnalysis(
   }
 
 
-  const scores =
-    report.scores ||
-    {};
+  const enabled =
+    Boolean(
+      record.threeD?.enabled ||
+      record.images.threeD
+    );
 
 
-  const symmetry =
-    scores.symmetry ||
-    0;
-
-
-  const stability =
-    scores.stability ||
-    0;
-
-
-  const posture =
-    scores.posture ||
-    0;
+  const landmarkCount =
+    safeNumber(
+      record.threeD
+        ?.landmarkCount,
+      0
+    );
 
 
   container.innerHTML = `
@@ -1380,11 +1591,15 @@ function renderThreeDAnalysis(
     <div class="report-data-card">
 
       <span>
-        3D 자세 정렬
+        3D 분석
       </span>
 
       <strong>
-        ${posture}
+        ${
+          enabled
+            ? "분석 완료"
+            : "2D 분석"
+        }
       </strong>
 
     </div>
@@ -1393,11 +1608,11 @@ function renderThreeDAnalysis(
     <div class="report-data-card">
 
       <span>
-        좌우 균형
+        추적 포인트
       </span>
 
       <strong>
-        ${symmetry}
+        ${landmarkCount || 33}
       </strong>
 
     </div>
@@ -1406,11 +1621,14 @@ function renderThreeDAnalysis(
     <div class="report-data-card">
 
       <span>
-        중심 안정성
+        자세 안정성
       </span>
 
       <strong>
-        ${stability}
+        ${Math.round(
+          record.scores
+            .stability
+        )}
       </strong>
 
     </div>
@@ -1419,11 +1637,14 @@ function renderThreeDAnalysis(
     <div class="report-data-card">
 
       <span>
-        분석 상태
+        좌우 대칭
       </span>
 
       <strong>
-        COMPLETE
+        ${Math.round(
+          record.scores
+            .symmetry
+        )}
       </strong>
 
     </div>
@@ -1433,12 +1654,109 @@ function renderThreeDAnalysis(
 }
 
 
-/* ============================================================
-   21. ELITE COMPARISON
-============================================================ */
 
-function renderEliteReport(
-  report
+/* =========================================================
+   16. ELITE COMPARISON
+========================================================= */
+
+function getEliteComparison(
+  record
+) {
+
+  const score =
+    safeNumber(
+      record.scores.elite
+    );
+
+
+  if (
+    score >=
+    95
+  ) {
+
+    return {
+
+      level:
+        "ELITE +",
+
+      description:
+        "현재 분석 지표가 설정된 엘리트 기준에 매우 근접합니다. 반복 수행에서 같은 기술을 유지하는 것이 중요합니다."
+
+    };
+
+  }
+
+
+  if (
+    score >=
+    90
+  ) {
+
+    return {
+
+      level:
+        "ELITE",
+
+      description:
+        "엘리트 기준과 비교했을 때 높은 수준의 동작 패턴을 보입니다. 세부 기술의 일관성을 높여보세요."
+
+    };
+
+  }
+
+
+  if (
+    score >=
+    80
+  ) {
+
+    return {
+
+      level:
+        "ADVANCED",
+
+      description:
+        "전반적인 수행 수준은 양호합니다. 낮은 점수의 세부 항목을 우선 개선하면 엘리트 기준에 더 가까워질 수 있습니다."
+
+    };
+
+  }
+
+
+  if (
+    score >=
+    70
+  ) {
+
+    return {
+
+      level:
+        "DEVELOPING",
+
+      description:
+        "기본적인 동작 패턴은 형성되어 있습니다. 자세 안정성과 종목 기술을 함께 개선하는 것이 좋습니다."
+
+    };
+
+  }
+
+
+  return {
+
+    level:
+      "FOUNDATION",
+
+    description:
+      "기본 동작의 안정성과 좌우 균형을 우선적으로 강화한 뒤 종목 기술을 단계적으로 발전시키는 것이 좋습니다."
+
+  };
+
+}
+
+
+
+function renderEliteComparison(
+  record
 ) {
 
   const container =
@@ -1454,43 +1772,16 @@ function renderEliteReport(
   }
 
 
-  const score =
-    Number(
-      report.scores?.elite ||
-      0
+  const comparison =
+    getEliteComparison(
+      record
     );
 
 
-  let description =
-    "기술 동작의 추가 개선이 필요합니다.";
-
-
-  if (
-    score >= 90
-  ) {
-
-    description =
-      "엘리트 선수 기준에 매우 근접한 동작 수준입니다.";
-
-  }
-
-  else if (
-    score >= 80
-  ) {
-
-    description =
-      "상위 경기 선수 수준에 근접한 퍼포먼스입니다.";
-
-  }
-
-  else if (
-    score >= 70
-  ) {
-
-    description =
-      "경기 선수 수준이며 세부 기술 개선 시 상승 가능성이 높습니다.";
-
-  }
+  const score =
+    Math.round(
+      record.scores.elite
+    );
 
 
   container.innerHTML = `
@@ -1500,30 +1791,32 @@ function renderEliteReport(
       <div class="elite-report-score">
 
         <small>
-          ELITE SCORE
+          ELITE PROXIMITY
         </small>
 
         <strong>
           ${score}
         </strong>
 
-        <span>
-          ${getScoreLevel(score)}
-        </span>
-
       </div>
 
 
-      <div class="elite-report-description">
+      <div>
 
-        <h3>
-          엘리트 기준 비교
-        </h3>
+        <span class="elite-level">
+
+          ${escapeReportHTML(
+            comparison.level
+          )}
+
+        </span>
 
         <p>
+
           ${escapeReportHTML(
-            description
+            comparison.description
           )}
+
         </p>
 
       </div>
@@ -1535,12 +1828,13 @@ function renderEliteReport(
 }
 
 
-/* ============================================================
-   22. FEEDBACK GENERATOR
-============================================================ */
 
-function generateFeedback(
-  report
+/* =========================================================
+   17. FEEDBACK
+========================================================= */
+
+function buildAutomaticFeedback(
+  record
 ) {
 
   const feedback =
@@ -1548,93 +1842,61 @@ function generateFeedback(
 
 
   const scores =
-    report.scores ||
-    {};
+    record.scores;
 
 
-  if (
-    scores.posture >= 90
-  ) {
-
-    feedback.push(
-      "전체 자세 정렬과 중심 유지가 안정적입니다."
-    );
-
-  }
-
-  else {
-
-    feedback.push(
-      "동작 중 상체와 골반의 정렬을 조금 더 안정적으로 유지할 필요가 있습니다."
-    );
-
-  }
+  const sorted =
+    Object.entries(
+      scores
+    )
+      .sort(
+        (a, b) =>
+          a[1] -
+          b[1]
+      );
 
 
-  if (
-    scores.symmetry < 85
-  ) {
-
-    feedback.push(
-      "좌우 움직임 차이가 관찰되므로 좌우 대칭성과 체중 이동을 확인하는 것이 좋습니다."
-    );
-
-  }
-
-  else {
-
-    feedback.push(
-      "좌우 대칭성이 비교적 안정적으로 유지되고 있습니다."
-    );
-
-  }
+  const weakest =
+    sorted[0];
 
 
-  if (
-    scores.technique >= 90
-  ) {
+  const strongest =
+    sorted[
+      sorted.length -
+      1
+    ];
 
-    feedback.push(
-      "종목 기술 수행의 연결이 우수합니다."
-    );
 
-  }
+  if (weakest) {
 
-  else {
+    feedback.push({
 
-    feedback.push(
-      "기술 전환 구간에서 동작 연결을 더 부드럽게 만들면 효율 향상에 도움이 됩니다."
-    );
+      title:
+        `${REPORT_SCORE_LABELS[weakest[0]] || weakest[0]} 우선 개선`,
+
+      description:
+        `현재 ${Math.round(
+          weakest[1]
+        )}점으로 분석 항목 중 상대적으로 낮습니다. 관련 교정훈련을 우선 적용하세요.`
+
+    });
 
   }
 
 
-  if (
-    scores.efficiency < 85
-  ) {
+  if (strongest) {
 
-    feedback.push(
-      "불필요한 상하 움직임을 줄이고 힘 전달 방향을 정리하면 동작 효율을 높일 수 있습니다."
-    );
+    feedback.push({
 
-  }
+      title:
+        `${REPORT_SCORE_LABELS[strongest[0]] || strongest[0]} 강점`,
 
+      description:
+        `현재 ${Math.round(
+          strongest[1]
+        )}점으로 분석 항목 중 강점으로 나타났습니다.`
 
-  if (
-    scores.elite >= 90
-  ) {
-
-    feedback.push(
-      "현재 분석에서는 엘리트 기준에 매우 근접한 결과를 보였습니다."
-    );
-
-  }
-
-  else {
-
-    feedback.push(
-      "세부 기술 정확도와 반복 안정성을 높이면 엘리트 기준과의 차이를 줄일 수 있습니다."
-    );
+    });
 
   }
 
@@ -1644,12 +1906,9 @@ function generateFeedback(
 }
 
 
-/* ============================================================
-   23. FEEDBACK RENDER
-============================================================ */
 
-function renderFeedback(
-  report
+function renderReportFeedback(
+  record
 ) {
 
   const container =
@@ -1665,176 +1924,192 @@ function renderFeedback(
   }
 
 
-  const feedback =
-    generateFeedback(
-      report
-    );
+  let feedback =
+    Array.isArray(
+      record.feedback
+    )
+      ? [
+          ...record.feedback
+        ]
+      : [];
+
+
+  if (
+    !feedback.length
+  ) {
+
+    feedback =
+      buildAutomaticFeedback(
+        record
+      );
+
+  }
+
+
+  if (
+    !feedback.length
+  ) {
+
+    container.innerHTML = `
+
+      <div class="empty-state">
+
+        피드백 데이터가 없습니다.
+
+      </div>
+
+    `;
+
+
+    return;
+
+  }
 
 
   container.innerHTML =
     feedback
       .map(
-        (
-          text,
-          index
-        ) => `
+        (item, index) => {
 
-          <div class="feedback-item">
+          const title =
+            typeof item ===
+            "string"
+              ? `피드백 ${index + 1}`
+              : item.title ||
+                `피드백 ${index + 1}`;
 
-            <span>
-              ${String(
-                index + 1
-              ).padStart(
-                2,
-                "0"
-              )}
-            </span>
 
-            <p>
-              ${escapeReportHTML(
-                text
-              )}
-            </p>
+          const description =
+            typeof item ===
+            "string"
+              ? item
+              : item.description ||
+                item.reason ||
+                "-";
 
-          </div>
 
-        `
+          return `
+
+            <article class="feedback-card">
+
+              <span class="feedback-number">
+                ${String(
+                  index + 1
+                ).padStart(
+                  2,
+                  "0"
+                )}
+              </span>
+
+              <div>
+
+                <strong>
+                  ${escapeReportHTML(
+                    title
+                  )}
+                </strong>
+
+                <p>
+                  ${escapeReportHTML(
+                    description
+                  )}
+                </p>
+
+              </div>
+
+            </article>
+
+          `;
+
+        }
       )
       .join("");
 
 }
 
 
-/* ============================================================
-   24. TRAINING GENERATOR
-============================================================ */
 
-function generateTraining(
-  report
+/* =========================================================
+   18. TRAINING
+========================================================= */
+
+function normalizeTrainingItem(
+  item,
+  index
 ) {
 
-  const training =
-    [];
-
-
-  const scores =
-    report.scores ||
-    {};
-
-
   if (
-    scores.posture < 90
+    typeof item ===
+    "string"
   ) {
 
-    training.push({
+    return {
 
-      title:
-        "자세 안정성",
+      rank:
+        index + 1,
 
-      content:
-        "기본 자세를 일정하게 유지하는 저강도 기술 반복과 코어 안정화 훈련"
+      name:
+        item,
 
-    });
+      category:
+        "추천 훈련",
+
+      target:
+        "종목 수행 능력",
+
+      reason:
+        "현재 자세분석 결과를 기반으로 추천된 훈련입니다.",
+
+      priorityLabel:
+        index <
+        8
+          ? "우선 추천"
+          : "보조 추천"
+
+    };
 
   }
 
 
-  if (
-    scores.symmetry < 90
-  ) {
+  return {
 
-    training.push({
+    rank:
+      item.rank ||
+      index + 1,
 
-      title:
-        "좌우 대칭",
+    name:
+      item.name ||
+      `훈련 ${index + 1}`,
 
-      content:
-        "좌우 단측 동작을 번갈아 수행하며 체중 이동과 균형을 확인하는 훈련"
+    category:
+      item.category ||
+      "추천 훈련",
 
-    });
+    target:
+      item.target ||
+      "-",
 
-  }
+    reason:
+      item.reason ||
+      "-",
 
+    priorityLabel:
+      item.priorityLabel ||
+      (
+        index <
+        8
+          ? "우선 추천"
+          : "보조 추천"
+      )
 
-  if (
-    scores.technique < 90
-  ) {
-
-    training.push({
-
-      title:
-        "기술 수행",
-
-      content:
-        "동작을 짧은 구간으로 나누어 정확도를 먼저 확보한 뒤 전체 동작으로 연결"
-
-    });
-
-  }
-
-
-  if (
-    scores.stability < 90
-  ) {
-
-    training.push({
-
-      title:
-        "동작 안정성",
-
-      content:
-        "한발 균형, 코어 안정화, 저강도 동적 밸런스 훈련"
-
-    });
-
-  }
-
-
-  if (
-    scores.efficiency < 90
-  ) {
-
-    training.push({
-
-      title:
-        "움직임 효율",
-
-      content:
-        "불필요한 동작을 줄이고 힘 전달 방향을 확인하는 기술 반복"
-
-    });
-
-  }
-
-
-  if (
-    training.length === 0
-  ) {
-
-    training.push({
-
-      title:
-        "퍼포먼스 유지",
-
-      content:
-        "현재 기술 수준을 유지하면서 경기 상황과 비슷한 조건에서 반복 정확도를 높이는 훈련"
-
-    });
-
-  }
-
-
-  return training;
+  };
 
 }
 
 
-/* ============================================================
-   25. TRAINING RENDER
-============================================================ */
 
-function renderTraining(
-  report
+function renderReportTraining(
+  record
 ) {
 
   const container =
@@ -1850,924 +2125,1386 @@ function renderTraining(
   }
 
 
-  const training =
-    generateTraining(
-      report
-    );
-
-
-  container.innerHTML =
-    training
-      .map(
-        (
-          item,
-          index
-        ) => `
-
-          <div class="training-item">
-
-            <span class="training-number">
-              ${String(
-                index + 1
-              ).padStart(
-                2,
-                "0"
-              )}
-            </span>
-
-            <div>
-
-              <strong>
-                ${escapeReportHTML(
-                  item.title
-                )}
-              </strong>
-
-              <p>
-                ${escapeReportHTML(
-                  item.content
-                )}
-              </p>
-
-            </div>
-
-          </div>
-
-        `
-      )
-      .join("");
-
-}
-
-
-/* ============================================================
-   26. GET ANALYSIS LIST
-============================================================ */
-
-function getAnalysisRecords() {
-
-  const state =
-    window.SeolcheonApp
-      ?.state;
+  let training =
+    Array.isArray(
+      record.training
+    )
+      ? record.training
+      : [];
 
 
   if (
-    state &&
-    Array.isArray(
-      state.analyses
-    )
+    !training.length &&
+    window.SeolcheonTraining
+      ?.build
   ) {
 
-    return state.analyses;
+    training =
+      window.SeolcheonTraining
+        .build(
+          window.SeolcheonAnalysisState
+        );
 
   }
 
 
-  try {
-
-    const saved =
-      JSON.parse(
-        localStorage.getItem(
-          "seolcheon_analyses"
-        ) ||
-        "[]"
+  training =
+    training
+      .slice(
+        0,
+        30
+      )
+      .map(
+        normalizeTrainingItem
       );
 
 
-    return Array.isArray(
-      saved
-    )
-      ? saved
-      : [];
-
-  }
-
-  catch {
-
-    return [];
-
-  }
-
-}
-
-
-/* ============================================================
-   27. RECORD LIST
-============================================================ */
-
-function renderAnalysisRecords() {
-
-  const container =
-    reportQuery(
-      "[data-analysis-record-list]"
-    );
-
-
-  if (!container) {
-
-    return;
-
-  }
-
-
-  const records =
-    getAnalysisRecords();
-
-
   if (
-    records.length === 0
+    !training.length
   ) {
 
     container.innerHTML = `
 
       <div class="empty-state">
 
-        저장된 분석 기록이 없습니다.
+        추천 훈련 데이터가 없습니다.
 
       </div>
 
     `;
 
+
     return;
 
   }
 
 
-  container.innerHTML =
-    records
-      .map(
-        record => `
+  container.innerHTML = `
 
-          <article
-            class="analysis-record-card"
-            data-record-id="${escapeReportHTML(
-              record.id
-            )}"
-          >
+    <div class="report-training-summary">
 
-            <div class="record-score">
+      <div>
 
-              <small>
-                SCORE
-              </small>
+        <span>
+          추천 훈련
+        </span>
 
-              <strong>
-                ${safeValue(
-                  record.overall,
-                  "--"
-                )}
-              </strong>
+        <strong>
+          ${training.length}
+        </strong>
 
-            </div>
+      </div>
+
+      <div>
+
+        <span>
+          우선 훈련
+        </span>
+
+        <strong>
+          ${
+            training.filter(
+              item =>
+                item.priorityLabel ===
+                "우선 추천"
+            ).length
+          }
+        </strong>
+
+      </div>
+
+    </div>
 
 
-            <div class="record-main">
+    <div class="report-training-grid">
 
-              <small>
-                ${escapeReportHTML(
-                  formatReportDate(
-                    record.createdAt
-                  )
-                )}
-              </small>
+      ${training
+        .map(
+          item => `
+
+            <article
+              class="report-training-card ${
+                item.priorityLabel ===
+                "우선 추천"
+                  ? "priority"
+                  : ""
+              }"
+            >
+
+              <div class="report-training-top">
+
+                <span class="training-rank">
+                  ${String(
+                    item.rank
+                  ).padStart(
+                    2,
+                    "0"
+                  )}
+                </span>
+
+                <span>
+                  ${escapeReportHTML(
+                    item.category
+                  )}
+                </span>
+
+              </div>
+
 
               <h3>
                 ${escapeReportHTML(
-                  record.athleteName ||
-                  "선수 미선택"
+                  item.name
                 )}
               </h3>
 
+
+              <div class="report-training-target">
+
+                <small>
+                  TARGET
+                </small>
+
+                <strong>
+                  ${escapeReportHTML(
+                    item.target
+                  )}
+                </strong>
+
+              </div>
+
+
               <p>
                 ${escapeReportHTML(
-                  record.sportName ||
-                  "-"
-                )}
-                ·
-                ${escapeReportHTML(
-                  getModeName(
-                    record.mode
-                  )
+                  item.reason
                 )}
               </p>
 
-            </div>
 
+              <span class="report-training-priority">
 
-            <div class="record-actions">
+                ${escapeReportHTML(
+                  item.priorityLabel
+                )}
 
-              <button
-                type="button"
-                class="primary-button"
-                data-record-open="${escapeReportHTML(
-                  record.id
-                )}"
-              >
-                리포트
-              </button>
+              </span>
 
+            </article>
 
-              <button
-                type="button"
-                class="ghost-button"
-                data-record-delete="${escapeReportHTML(
-                  record.id
-                )}"
-              >
-                삭제
-              </button>
+          `
+        )
+        .join("")}
 
-            </div>
+    </div>
 
-          </article>
-
-        `
-      )
-      .join("");
+  `;
 
 }
 
 
-/* ============================================================
-   28. OPEN RECORD
-============================================================ */
 
-function openAnalysisRecord(
-  recordId
+/* =========================================================
+   19. COMPLETE REPORT RENDER
+========================================================= */
+
+function renderPerformanceReport(
+  inputRecord
 ) {
 
-  const records =
-    getAnalysisRecords();
-
-
   const record =
-    records.find(
-      item =>
-        item.id ===
-        recordId
+    normalizeReportRecord(
+      inputRecord
     );
 
 
-  if (!record) {
-
-    alert(
-      "분석 기록을 찾을 수 없습니다."
-    );
-
-    return;
-
-  }
+  ReportState.currentRecord =
+    record;
 
 
-  loadReport(
+  renderReportHeader(
     record
   );
 
 
+  renderReportScores(
+    record
+  );
+
+
+  renderReportRadar(
+    record
+  );
+
+
+  renderReportImages(
+    record
+  );
+
+
+  renderReportAngles(
+    record
+  );
+
+
+  renderReportSportData(
+    record
+  );
+
+
+  renderReportSegments(
+    record
+  );
+
+
+  renderReportTechnique(
+    record
+  );
+
+
+  renderReport3D(
+    record
+  );
+
+
+  renderEliteComparison(
+    record
+  );
+
+
+  renderReportFeedback(
+    record
+  );
+
+
+  renderReportTraining(
+    record
+  );
+
+
+  ReportState.rendered =
+    true;
+
+
+  return record;
+
+}
+
+
+
+/* =========================================================
+   20. OPEN REPORT
+========================================================= */
+
+function openPerformanceReport(
+  record
+) {
+
+  const normalized =
+    renderPerformanceReport(
+      record
+    );
+
+
   window.SeolcheonApp
-    ?.navigate?.(
+    ?.navigate(
       "report"
     );
 
+
+  setTimeout(
+    () => {
+
+      renderReportRadar(
+        normalized
+      );
+
+    },
+    100
+  );
+
 }
 
 
-/* ============================================================
-   29. DELETE RECORD
-============================================================ */
 
-function deleteAnalysisRecord(
-  recordId
-) {
+/* =========================================================
+   21. ANALYSIS EVENT
+========================================================= */
 
-  const confirmed =
-    confirm(
-      "이 분석 기록을 삭제할까요?"
+window.addEventListener(
+  "seolcheon:open-report",
+  event => {
+
+    const record =
+      event.detail
+        ?.record;
+
+
+    openPerformanceReport(
+      record
     );
 
-
-  if (!confirmed) {
-
-    return;
-
   }
+);
 
 
-  const state =
-    window.SeolcheonApp
-      ?.state;
 
+/* =========================================================
+   22. RECORD CLICK SUPPORT
+========================================================= */
 
-  if (
-    state &&
-    Array.isArray(
-      state.analyses
-    )
-  ) {
+document.addEventListener(
+  "click",
+  event => {
 
-    state.analyses =
-      state.analyses.filter(
-        item =>
-          item.id !==
-          recordId
+    const openButton =
+      event.target.closest(
+        "[data-open-analysis-report]"
       );
 
 
-    window.SeolcheonApp
-      ?.saveAnalyses?.();
-
-  }
-
-  else {
-
-    const records =
-      getAnalysisRecords()
-        .filter(
-          item =>
-            item.id !==
-            recordId
-        );
-
-
-    localStorage.setItem(
-      "seolcheon_analyses",
-      JSON.stringify(
-        records
-      )
-    );
-
-  }
-
-
-  renderAnalysisRecords();
-
-
-  window.SeolcheonApp
-    ?.refreshDashboard?.();
-
-}
-
-
-/* ============================================================
-   30. PRINT REPORT
-============================================================ */
-
-function printReport() {
-
-  if (
-    !ReportState
-      .currentReport
-  ) {
-
-    alert(
-      "먼저 분석 리포트를 생성해주세요."
-    );
-
-    return;
-
-  }
-
-
-  window.print();
-
-}
-
-
-/* ============================================================
-   31. REPORT BACK
-============================================================ */
-
-function reportBack() {
-
-  window.SeolcheonApp
-    ?.navigate?.(
-      "analysis"
-    );
-
-}
-
-
-/* ============================================================
-   32. DASHBOARD RECENT RECORDS
-============================================================ */
-
-function renderDashboardRecent() {
-
-  const container =
-    reportQuery(
-      "[data-dashboard-recent]"
-    );
-
-
-  if (!container) {
-
-    return;
-
-  }
-
-
-  const records =
-    getAnalysisRecords()
-      .slice(
-        0,
-        5
-      );
-
-
-  if (
-    records.length === 0
-  ) {
-
-    container.innerHTML = `
-
-      <div class="empty-state">
-        분석 기록이 없습니다.
-      </div>
-
-    `;
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    records
-      .map(
-        record => `
-
-          <button
-            type="button"
-            class="dashboard-recent-item"
-            data-dashboard-record="${escapeReportHTML(
-              record.id
-            )}"
-          >
-
-            <span>
-
-              <strong>
-                ${escapeReportHTML(
-                  record.athleteName ||
-                  "선수 미선택"
-                )}
-              </strong>
-
-              <small>
-                ${escapeReportHTML(
-                  record.sportName ||
-                  "-"
-                )}
-              </small>
-
-            </span>
-
-
-            <strong>
-              ${safeValue(
-                record.overall,
-                "--"
-              )}
-            </strong>
-
-          </button>
-
-        `
-      )
-      .join("");
-
-}
-
-
-/* ============================================================
-   33. DASHBOARD STATISTICS
-============================================================ */
-
-function updateDashboardStatistics() {
-
-  const records =
-    getAnalysisRecords();
-
-
-  const athleteCount =
-    window.SeolcheonApp
-      ?.state
-      ?.athletes
-      ?.length ||
-    0;
-
-
-  const analysisCount =
-    records.length;
-
-
-  const average =
-    analysisCount
-      ? Math.round(
-          records.reduce(
-            (
-              sum,
-              item
-            ) =>
-              sum +
-              (
-                Number(
-                  item.overall
-                ) ||
-                0
-              ),
-            0
-          ) /
-          analysisCount
-        )
-      : "--";
-
-
-  const reportCount =
-    analysisCount;
-
-
-  setReportText(
-    "[data-athlete-count]",
-    athleteCount
-  );
-
-
-  setReportText(
-    "[data-analysis-count]",
-    analysisCount
-  );
-
-
-  setReportText(
-    "[data-average-score]",
-    average
-  );
-
-
-  setReportText(
-    "[data-report-count]",
-    reportCount
-  );
-
-
-  const latest =
-    records[0];
-
-
-  if (latest) {
-
-    const scores =
-      latest.scores ||
-      {};
-
-
-    [
-
-      "posture",
-
-      "symmetry",
-
-      "technique",
-
-      "elite"
-
-    ].forEach(
-      key => {
-
-        const value =
-          Number(
-            scores[key]
-          ) ||
-          0;
-
-
-        const scoreElement =
-          reportQuery(
-            `[data-dashboard-score="${key}"]`
-          );
-
-
-        const barElement =
-          reportQuery(
-            `[data-dashboard-bar="${key}"]`
-          );
-
-
-        if (scoreElement) {
-
-          scoreElement.textContent =
-            value;
-
-        }
-
-
-        if (barElement) {
-
-          barElement.style.width =
-            `${value}%`;
-
-        }
-
-      }
-    );
-
-  }
-
-
-  renderDashboardRecent();
-
-}
-
-
-/* ============================================================
-   34. RECORD CLICK EVENTS
-============================================================ */
-
-function initializeRecordEvents() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-
-      const openButton =
-        event.target.closest(
-          "[data-record-open]"
-        );
-
-
-      if (openButton) {
-
-        openAnalysisRecord(
-          openButton.dataset
-            .recordOpen
-        );
-
-        return;
-
-      }
-
-
-      const deleteButton =
-        event.target.closest(
-          "[data-record-delete]"
-        );
-
-
-      if (deleteButton) {
-
-        deleteAnalysisRecord(
-          deleteButton.dataset
-            .recordDelete
-        );
-
-        return;
-
-      }
-
-
-      const dashboardRecord =
-        event.target.closest(
-          "[data-dashboard-record]"
-        );
-
-
-      if (
-        dashboardRecord
-      ) {
-
-        openAnalysisRecord(
-          dashboardRecord.dataset
-            .dashboardRecord
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   35. REPORT EVENTS
-============================================================ */
-
-function initializeReportEvents() {
-
-  reportQuery(
-    "[data-report-print]"
-  )
-    ?.addEventListener(
-      "click",
-      printReport
-    );
-
-
-  reportQuery(
-    "[data-report-back]"
-  )
-    ?.addEventListener(
-      "click",
-      reportBack
-    );
-
-
-  initializeRecordEvents();
-
-}
-
-
-/* ============================================================
-   36. REFRESH
-============================================================ */
-
-function refreshReportSystem() {
-
-  renderAnalysisRecords();
-
-  updateDashboardStatistics();
-
-}
-
-
-/* ============================================================
-   37. PAGE OBSERVER
-============================================================ */
-
-function initializePageObserver() {
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      const navigation =
-        event.target.closest(
-          "[data-nav]"
-        );
-
-
-      if (!navigation) {
-
-        return;
-
-      }
-
-
-      const page =
-        navigation.dataset.nav;
-
-
-      if (
-        page === "records"
-      ) {
-
-        setTimeout(
-          renderAnalysisRecords,
-          0
-        );
-
-      }
-
-
-      if (
-        page === "dashboard"
-      ) {
-
-        setTimeout(
-          updateDashboardStatistics,
-          0
-        );
-
-      }
-
-
-      if (
-        page === "report"
-      ) {
-
-        const current =
-          window.SeolcheonApp
-            ?.state
-            ?.currentReport;
-
-
-        if (current) {
-
-          setTimeout(
-            () =>
-              loadReport(
-                current
-              ),
-            0
-          );
-
-        }
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   38. PUBLIC API
-============================================================ */
-
-window.ReportManager = {
-
-  initialized:
-    false,
-
-
-  init() {
-
-    if (
-      this.initialized
-    ) {
+    if (!openButton) {
 
       return;
 
     }
 
 
-    this.initialized =
-      true;
+    const recordId =
+      openButton.dataset
+        .openAnalysisReport;
 
 
-    initializeReportEvents();
+    if (!recordId) {
 
-    initializePageObserver();
-
-    refreshReportSystem();
-
-
-    const current =
-      window.SeolcheonApp
-        ?.state
-        ?.currentReport;
-
-
-    if (current) {
-
-      loadReport(
-        current
-      );
+      return;
 
     }
 
 
-    console.log(
-      "[REPORT] READY"
+    let record =
+      null;
+
+
+    if (
+      window.SeolcheonCore
+        ?.getAnalysisRecord
+    ) {
+
+      record =
+        window.SeolcheonCore
+          .getAnalysisRecord(
+            recordId
+          );
+
+    }
+
+
+    if (
+      !record &&
+      Array.isArray(
+        window.SeolcheonState
+          ?.analyses
+      )
+    ) {
+
+      record =
+        window.SeolcheonState
+          .analyses
+          .find(
+            item =>
+              String(
+                item.id
+              ) ===
+              String(
+                recordId
+              )
+          );
+
+    }
+
+
+    if (!record) {
+
+      alert(
+        "분석 기록을 찾지 못했습니다."
+      );
+
+      return;
+
+    }
+
+
+    openPerformanceReport(
+      record
     );
 
-  },
+  }
+);
 
 
-  loadReport,
+
+/* =========================================================
+   23. REPORT BACK
+========================================================= */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const button =
+      event.target.closest(
+        "[data-report-back]"
+      );
 
 
-  render:
-    renderReport,
+    if (!button) {
+
+      return;
+
+    }
 
 
-  refresh:
-    refreshReportSystem,
+    window.SeolcheonApp
+      ?.navigate(
+        "analysis"
+      );
+
+  }
+);
 
 
-  renderRecords:
-    renderAnalysisRecords,
 
+/* =========================================================
+   24. PRINT / PDF
+========================================================= */
 
-  refreshDashboard:
-    updateDashboardStatistics,
+function printPerformanceReport() {
 
+  if (
+    !ReportState.rendered
+  ) {
 
-  print:
-    printReport,
-
-
-  getCurrentReport() {
-
-    return ReportState
-      .currentReport;
+    renderPerformanceReport();
 
   }
 
-};
+
+  document.body
+    .classList
+    .add(
+      "printing-report"
+    );
 
 
-/* ============================================================
-   39. APP BRIDGE
-============================================================ */
+  setTimeout(
+    () => {
 
-function connectReportToApp() {
+      window.print();
+
+
+      setTimeout(
+        () => {
+
+          document.body
+            .classList
+            .remove(
+              "printing-report"
+            );
+
+        },
+        300
+      );
+
+    },
+    100
+  );
+
+}
+
+
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const button =
+      event.target.closest(
+        "[data-report-print]"
+      );
+
+
+    if (!button) {
+
+      return;
+
+    }
+
+
+    printPerformanceReport();
+
+  }
+);
+
+
+
+/* =========================================================
+   25. REPORT PAGE NAVIGATION
+========================================================= */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const nav =
+      event.target.closest(
+        '[data-nav="report"]'
+      );
+
+
+    if (!nav) {
+
+      return;
+
+    }
+
+
+    setTimeout(
+      () => {
+
+        renderPerformanceReport(
+          ReportState.currentRecord
+        );
+
+      },
+      50
+    );
+
+  }
+);
+
+
+
+/* =========================================================
+   26. ANALYSIS SNAPSHOT UPDATE
+========================================================= */
+
+function refreshReportFromCurrentAnalysis() {
+
+  const analysis =
+    window.SeolcheonAnalysisState;
+
+
+  if (!analysis) {
+
+    return null;
+
+  }
+
+
+  try {
+
+    window.SeolcheonAnalysis
+      ?.createSnapshot?.();
+
+  }
+
+  catch (error) {
+
+    console.warn(
+      "Snapshot refresh failed:",
+      error
+    );
+
+  }
+
+
+  return renderPerformanceReport();
+
+}
+
+
+
+/* =========================================================
+   27. REPORT EXPORT DATA
+========================================================= */
+
+function getCurrentReportData() {
 
   if (
-    !window.SeolcheonApp
+    ReportState.currentRecord
+  ) {
+
+    return JSON.parse(
+      JSON.stringify(
+        ReportState.currentRecord
+      )
+    );
+
+  }
+
+
+  return normalizeReportRecord();
+
+}
+
+
+
+/* =========================================================
+   28. PERFORMANCE GRADE
+========================================================= */
+
+function getPerformanceGrade(
+  score
+) {
+
+  score =
+    safeNumber(
+      score
+    );
+
+
+  if (
+    score >=
+    95
+  ) {
+
+    return "S";
+
+  }
+
+
+  if (
+    score >=
+    90
+  ) {
+
+    return "A+";
+
+  }
+
+
+  if (
+    score >=
+    85
+  ) {
+
+    return "A";
+
+  }
+
+
+  if (
+    score >=
+    80
+  ) {
+
+    return "B+";
+
+  }
+
+
+  if (
+    score >=
+    75
+  ) {
+
+    return "B";
+
+  }
+
+
+  if (
+    score >=
+    70
+  ) {
+
+    return "C+";
+
+  }
+
+
+  return "C";
+
+}
+
+
+
+/* =========================================================
+   29. ADD GRADE TO REPORT
+========================================================= */
+
+function renderPerformanceGrade(
+  record
+) {
+
+  let element =
+    reportQuery(
+      "[data-report-grade-score]"
+    );
+
+
+  if (!element) {
+
+    const circle =
+      reportQuery(
+        ".report-score-circle"
+      );
+
+
+    if (circle) {
+
+      element =
+        document.createElement(
+          "span"
+        );
+
+
+      element.className =
+        "report-performance-grade";
+
+
+      element.setAttribute(
+        "data-report-grade-score",
+        ""
+      );
+
+
+      circle.appendChild(
+        element
+      );
+
+    }
+
+  }
+
+
+  if (element) {
+
+    element.textContent =
+      getPerformanceGrade(
+        record.overallScore
+      );
+
+  }
+
+}
+
+
+
+/* =========================================================
+   30. WRAP MAIN RENDER
+========================================================= */
+
+const originalRenderPerformanceReport =
+  renderPerformanceReport;
+
+
+renderPerformanceReport =
+  function (
+    inputRecord
+  ) {
+
+    const record =
+      originalRenderPerformanceReport(
+        inputRecord
+      );
+
+
+    renderPerformanceGrade(
+      record
+    );
+
+
+    return record;
+
+  };
+
+
+
+/* =========================================================
+   31. SCORE DESCRIPTION
+========================================================= */
+
+function getScoreDescription(
+  score
+) {
+
+  score =
+    safeNumber(
+      score
+    );
+
+
+  if (
+    score >=
+    90
+  ) {
+
+    return "매우 우수";
+
+  }
+
+
+  if (
+    score >=
+    80
+  ) {
+
+    return "우수";
+
+  }
+
+
+  if (
+    score >=
+    70
+  ) {
+
+    return "양호";
+
+  }
+
+
+  if (
+    score >=
+    60
+  ) {
+
+    return "개선 필요";
+
+  }
+
+
+  return "기초 교정 필요";
+
+}
+
+
+
+/* =========================================================
+   32. SCORE COLOR CLASS
+========================================================= */
+
+function getScoreClass(
+  score
+) {
+
+  score =
+    safeNumber(
+      score
+    );
+
+
+  if (
+    score >=
+    90
+  ) {
+
+    return "score-excellent";
+
+  }
+
+
+  if (
+    score >=
+    80
+  ) {
+
+    return "score-good";
+
+  }
+
+
+  if (
+    score >=
+    70
+  ) {
+
+    return "score-normal";
+
+  }
+
+
+  return "score-warning";
+
+}
+
+
+
+/* =========================================================
+   33. SCORE CARD ENHANCEMENT
+========================================================= */
+
+function enhanceScoreCards(
+  record
+) {
+
+  Object.entries(
+    record.scores
+  )
+    .forEach(
+      ([key, score]) => {
+
+        reportQueryAll(
+          `[data-report-score="${key}"]`
+        )
+          .forEach(
+            element => {
+
+              const parent =
+                element.parentElement;
+
+
+              if (!parent) {
+
+                return;
+
+              }
+
+
+              parent.classList.remove(
+
+                "score-excellent",
+
+                "score-good",
+
+                "score-normal",
+
+                "score-warning"
+
+              );
+
+
+              parent.classList.add(
+                getScoreClass(
+                  score
+                )
+              );
+
+
+              parent.title =
+                getScoreDescription(
+                  score
+                );
+
+            }
+          );
+
+      }
+    );
+
+}
+
+
+
+/* =========================================================
+   34. REPORT SUMMARY
+========================================================= */
+
+function createReportSummary(
+  record
+) {
+
+  const scoreEntries =
+    Object.entries(
+      record.scores
+    )
+      .sort(
+        (a, b) =>
+          b[1] -
+          a[1]
+      );
+
+
+  const strongest =
+    scoreEntries[0];
+
+
+  const weakest =
+    scoreEntries[
+      scoreEntries.length -
+      1
+    ];
+
+
+  return {
+
+    grade:
+      getPerformanceGrade(
+        record.overallScore
+      ),
+
+    level:
+      getScoreDescription(
+        record.overallScore
+      ),
+
+    strongest: {
+
+      key:
+        strongest?.[0] ||
+        null,
+
+      name:
+        REPORT_SCORE_LABELS[
+          strongest?.[0]
+        ] ||
+        "-",
+
+      score:
+        strongest?.[1] ||
+        0
+
+    },
+
+    weakest: {
+
+      key:
+        weakest?.[0] ||
+        null,
+
+      name:
+        REPORT_SCORE_LABELS[
+          weakest?.[0]
+        ] ||
+        "-",
+
+      score:
+        weakest?.[1] ||
+        0
+
+    }
+
+  };
+
+}
+
+
+
+/* =========================================================
+   35. REPORT SUMMARY PANEL
+========================================================= */
+
+function ensureReportSummaryPanel(
+  record
+) {
+
+  const report =
+    reportQuery(
+      ".performance-report"
+    );
+
+
+  if (!report) {
+
+    return;
+
+  }
+
+
+  let panel =
+    reportQuery(
+      "[data-report-summary]"
+    );
+
+
+  if (!panel) {
+
+    panel =
+      document.createElement(
+        "section"
+      );
+
+
+    panel.className =
+      "report-section report-summary-section";
+
+
+    panel.setAttribute(
+      "data-report-summary",
+      ""
+    );
+
+
+    const athleteInfo =
+      reportQuery(
+        ".report-athlete-info"
+      );
+
+
+    if (
+      athleteInfo &&
+      athleteInfo.nextSibling
+    ) {
+
+      report.insertBefore(
+        panel,
+        athleteInfo.nextSibling
+      );
+
+    }
+
+    else {
+
+      report.appendChild(
+        panel
+      );
+
+    }
+
+  }
+
+
+  const summary =
+    createReportSummary(
+      record
+    );
+
+
+  panel.innerHTML = `
+
+    <div class="report-section-title">
+
+      <span>
+        00
+      </span>
+
+      <h2>
+        ANALYSIS SUMMARY
+      </h2>
+
+    </div>
+
+
+    <div class="report-summary-grid">
+
+
+      <div>
+
+        <span>
+          종합 평가
+        </span>
+
+        <strong>
+          ${escapeReportHTML(
+            summary.level
+          )}
+        </strong>
+
+      </div>
+
+
+      <div>
+
+        <span>
+          등급
+        </span>
+
+        <strong>
+          ${escapeReportHTML(
+            summary.grade
+          )}
+        </strong>
+
+      </div>
+
+
+      <div>
+
+        <span>
+          강점
+        </span>
+
+        <strong>
+          ${escapeReportHTML(
+            summary.strongest.name
+          )}
+        </strong>
+
+        <small>
+          ${Math.round(
+            summary.strongest.score
+          )}점
+        </small>
+
+      </div>
+
+
+      <div>
+
+        <span>
+          우선 개선
+        </span>
+
+        <strong>
+          ${escapeReportHTML(
+            summary.weakest.name
+          )}
+        </strong>
+
+        <small>
+          ${Math.round(
+            summary.weakest.score
+          )}점
+        </small>
+
+      </div>
+
+
+    </div>
+
+  `;
+
+}
+
+
+
+/* =========================================================
+   36. FINAL RENDER ENHANCEMENT
+========================================================= */
+
+const enhancedRenderPerformanceReport =
+  renderPerformanceReport;
+
+
+renderPerformanceReport =
+  function (
+    inputRecord
+  ) {
+
+    const record =
+      enhancedRenderPerformanceReport(
+        inputRecord
+      );
+
+
+    enhanceScoreCards(
+      record
+    );
+
+
+    ensureReportSummaryPanel(
+      record
+    );
+
+
+    ReportState.currentRecord =
+      record;
+
+
+    return record;
+
+  };
+
+
+
+/* =========================================================
+   37. SAVE REPORT
+========================================================= */
+
+function saveCurrentReport() {
+
+  const record =
+    getCurrentReportData();
+
+
+  if (
+    window.SeolcheonCore
+      ?.saveReport
+  ) {
+
+    return window.SeolcheonCore
+      .saveReport(
+        record
+      );
+
+  }
+
+
+  try {
+
+    const key =
+      "seolcheon_performance_reports";
+
+
+    const reports =
+      JSON.parse(
+        localStorage.getItem(
+          key
+        ) ||
+        "[]"
+      );
+
+
+    const report = {
+
+      ...record,
+
+      reportId:
+        `report_${Date.now()}`,
+
+      savedAt:
+        new Date()
+          .toISOString()
+
+    };
+
+
+    reports.unshift(
+      report
+    );
+
+
+    localStorage.setItem(
+      key,
+      JSON.stringify(
+        reports
+      )
+    );
+
+
+    return report;
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "Report save error:",
+      error
+    );
+
+
+    return null;
+
+  }
+
+}
+
+
+
+/* =========================================================
+   38. OPTIONAL SAVE BUTTON
+========================================================= */
+
+function ensureReportSaveButton() {
+
+  const toolbar =
+    reportQuery(
+      ".report-toolbar"
+    );
+
+
+  if (!toolbar) {
+
+    return;
+
+  }
+
+
+  if (
+    reportQuery(
+      "[data-report-save]"
+    )
   ) {
 
     return;
@@ -2775,84 +3512,94 @@ function connectReportToApp() {
   }
 
 
-  const oldRefresh =
-    window.SeolcheonApp
-      .refreshDashboard;
+  const button =
+    document.createElement(
+      "button"
+    );
 
 
-  window.SeolcheonApp
-    .refreshDashboard =
-    function() {
-
-      if (
-        typeof oldRefresh ===
-        "function"
-      ) {
-
-        try {
-
-          oldRefresh();
-
-        }
-
-        catch (error) {
-
-          console.warn(
-            error
-          );
-
-        }
-
-      }
+  button.type =
+    "button";
 
 
-      updateDashboardStatistics();
+  button.className =
+    "ghost-button";
 
-      renderAnalysisRecords();
 
-    };
+  button.setAttribute(
+    "data-report-save",
+    ""
+  );
+
+
+  button.textContent =
+    "리포트 저장";
+
+
+  const printButton =
+    toolbar.querySelector(
+      "[data-report-print]"
+    );
+
+
+  if (printButton) {
+
+    toolbar.insertBefore(
+      button,
+      printButton
+    );
+
+  }
+
+  else {
+
+    toolbar.appendChild(
+      button
+    );
+
+  }
 
 }
 
 
-/* ============================================================
-   40. STORAGE EVENT
-============================================================ */
 
-window.addEventListener(
-  "storage",
+/* =========================================================
+   39. SAVE BUTTON EVENT
+========================================================= */
+
+document.addEventListener(
+  "click",
   event => {
 
-    if (
-      event.key ===
-      "seolcheon_analyses"
-    ) {
+    const button =
+      event.target.closest(
+        "[data-report-save]"
+      );
 
-      refreshReportSystem();
+
+    if (!button) {
+
+      return;
 
     }
 
-  }
-);
+
+    const result =
+      saveCurrentReport();
 
 
-/* ============================================================
-   41. BEFORE PRINT
-============================================================ */
+    if (result) {
 
-window.addEventListener(
-  "beforeprint",
-  () => {
+      alert(
+        "리포트를 저장했습니다."
+      );
 
-    const report =
-      ReportState
-        .currentReport;
+    }
 
+    else {
 
-    if (report) {
-
-      renderReport(
-        report
+      alert(
+        "리포트 저장에 실패했습니다."
       );
 
     }
@@ -2861,40 +3608,79 @@ window.addEventListener(
 );
 
 
-/* ============================================================
-   42. INITIALIZE
-============================================================ */
 
-function bootReportModule() {
+/* =========================================================
+   40. INITIALIZE
+========================================================= */
 
-  connectReportToApp();
+function initializeReportSystem() {
 
-
-  window.ReportManager
-    ?.init?.();
-
-}
+  ensureReportSaveButton();
 
 
-if (
-  document.readyState ===
-  "loading"
-) {
-
-  document.addEventListener(
-    "DOMContentLoaded",
-    bootReportModule
+  console.log(
+    "SEOLCHEON REPORT ENGINE READY"
   );
 
 }
 
-else {
 
-  bootReportModule();
+
+document.addEventListener(
+  "DOMContentLoaded",
+  initializeReportSystem
+);
+
+
+
+if (
+  document.readyState !==
+  "loading"
+) {
+
+  initializeReportSystem();
 
 }
 
 
-/* ============================================================
-   END REPORT.JS
-============================================================ */
+
+/* =========================================================
+   41. PUBLIC API
+========================================================= */
+
+window.SeolcheonReport = {
+
+  state:
+    ReportState,
+
+  render:
+    renderPerformanceReport,
+
+  open:
+    openPerformanceReport,
+
+  refresh:
+    refreshReportFromCurrentAnalysis,
+
+  print:
+    printPerformanceReport,
+
+  save:
+    saveCurrentReport,
+
+  getData:
+    getCurrentReportData,
+
+  getGrade:
+    getPerformanceGrade,
+
+  getSummary:
+    createReportSummary
+
+};
+
+
+
+/* =========================================================
+   END OF REPORT.JS
+========================================================= */
