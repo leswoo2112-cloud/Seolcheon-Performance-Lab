@@ -1,3561 +1,1912 @@
-/* ============================================================
+/* =========================================================
    SEOLCHEON SPORTS PERFORMANCE LAB
-   SPORTS.JS
-   4 / 6
+   TRAINING.JS
+   FILE 5 / 6
 
-   담당 기능
-   - 동계 / 하계 종목 데이터베이스
-   - 종목 카드 자동 생성
-   - 선수 등록 / 수정 / 삭제
-   - 선수 검색 / 필터
-   - 선수 선택
-   - 선수 → 자세분석 연결
-   - 종목별 분석 항목
-   - 바이애슬론 / XC 스키 특수 분석
-   - 육상 러닝 분석
-   - 역도 바벨 분석
-============================================================ */
+   SMART TRAINING RECOMMENDATION ENGINE
+   ---------------------------------------------------------
+   - Sport-specific training
+   - Weakness-based recommendation
+   - Corrective exercise
+   - Strength
+   - Core
+   - Balance
+   - Plyometric
+   - Mobility
+   - Technique drills
+   - Priority ranking
+   - Training UI
+   - Report integration
+========================================================= */
 
 "use strict";
 
 
-/* ============================================================
-   01. SPORT DATABASE
-============================================================ */
+/* =========================================================
+   01. TRAINING CONFIG
+========================================================= */
 
-const SPORTS_DATABASE = {
+const TRAINING_CONFIG = {
 
+  maxRecommendations: 30,
 
-  /* ========================================================
-     WINTER
-  ======================================================== */
+  priorityLimit: 8,
 
-  winter: {
+  categories: {
 
+    corrective: "교정",
 
-    biathlon: {
+    strength: "근력",
 
-      id: "biathlon",
+    core: "코어",
 
-      name: "바이애슬론",
+    balance: "밸런스",
 
-      english: "BIATHLON",
+    plyometric: "플라이오메트릭",
 
-      icon: "🎿",
+    mobility: "가동성",
 
-      season: "winter",
+    technique: "기술",
 
-      category: "ski",
+    endurance: "지구력",
 
-      description:
-        "스키 주법 · 구간 · 경사 · 자세 · 기술 전환 분석",
+    speed: "스피드",
 
-      metrics: [
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "distance",
-          name: "이동 거리",
-          unit: "m"
-        },
-
-        {
-          key: "cadence",
-          name: "동작 빈도",
-          unit: "spm"
-        },
-
-        {
-          key: "glide",
-          name: "글라이드",
-          unit: "m"
-        },
-
-        {
-          key: "poleTiming",
-          name: "폴링 타이밍",
-          unit: "ms"
-        },
-
-        {
-          key: "slope",
-          name: "경사도",
-          unit: "%"
-        },
-
-        {
-          key: "elevationGain",
-          name: "상승고도",
-          unit: "m"
-        },
-
-        {
-          key: "segmentTime",
-          name: "구간 시간",
-          unit: "s"
-        }
-
-      ],
-
-      angles: [
-
-        "왼쪽 무릎",
-        "오른쪽 무릎",
-
-        "왼쪽 고관절",
-        "오른쪽 고관절",
-
-        "왼쪽 발목",
-        "오른쪽 발목",
-
-        "왼쪽 팔꿈치",
-        "오른쪽 팔꿈치",
-
-        "몸통 기울기"
-
-      ],
-
-      techniques: [
-
-        "V1",
-
-        "V2",
-
-        "V2 Alternate",
-
-        "Double Pole",
-
-        "Free Skate",
-
-        "Transition"
-
-      ],
-
-      special: [
-
-        "ski-technique",
-        "segment",
-        "terrain",
-        "trajectory"
-
-      ]
-
-    },
-
-
-
-    crossCountry: {
-
-      id: "crossCountry",
-
-      name: "크로스컨트리",
-
-      english: "CROSS COUNTRY SKIING",
-
-      icon: "⛷",
-
-      season: "winter",
-
-      category: "ski",
-
-      description:
-        "스케이팅 · 클래식 주법 및 코스 구간 분석",
-
-      metrics: [
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "distance",
-          name: "거리",
-          unit: "m"
-        },
-
-        {
-          key: "cadence",
-          name: "주기",
-          unit: "spm"
-        },
-
-        {
-          key: "glide",
-          name: "글라이드",
-          unit: "m"
-        },
-
-        {
-          key: "poleTiming",
-          name: "폴링 타이밍",
-          unit: "ms"
-        },
-
-        {
-          key: "slope",
-          name: "경사",
-          unit: "%"
-        },
-
-        {
-          key: "elevationGain",
-          name: "상승고도",
-          unit: "m"
-        }
-
-      ],
-
-      angles: [
-
-        "왼쪽 무릎",
-        "오른쪽 무릎",
-
-        "왼쪽 고관절",
-        "오른쪽 고관절",
-
-        "왼쪽 발목",
-        "오른쪽 발목",
-
-        "왼쪽 팔꿈치",
-        "오른쪽 팔꿈치",
-
-        "몸통 기울기"
-
-      ],
-
-      techniques: [
-
-        "V1",
-
-        "V2",
-
-        "V2 Alternate",
-
-        "Double Pole",
-
-        "Diagonal Stride",
-
-        "Kick Double Pole"
-
-      ],
-
-      special: [
-
-        "ski-technique",
-        "segment",
-        "terrain",
-        "trajectory"
-
-      ]
-
-    },
-
-
-
-    alpineSki: {
-
-      id: "alpineSki",
-
-      name: "알파인스키",
-
-      english: "ALPINE SKIING",
-
-      icon: "⛷",
-
-      season: "winter",
-
-      category: "ski",
-
-      description:
-        "턴 · 엣지 · 무게중심 · 좌우 대칭 분석",
-
-      metrics: [
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "turnAngle",
-          name: "턴 각도",
-          unit: "°"
-        },
-
-        {
-          key: "edgeAngle",
-          name: "엣지 각도",
-          unit: "°"
-        },
-
-        {
-          key: "balance",
-          name: "균형",
-          unit: "%"
-        }
-
-      ],
-
-      angles: [
-
-        "왼쪽 무릎",
-        "오른쪽 무릎",
-        "왼쪽 고관절",
-        "오른쪽 고관절",
-        "몸통 기울기"
-
-      ],
-
-      techniques: [
-
-        "Carving",
-        "Transition",
-        "Edge Control"
-
-      ],
-
-      special: [
-
-        "terrain",
-        "trajectory"
-
-      ]
-
-    },
-
-
-
-    snowboard: {
-
-      id: "snowboard",
-
-      name: "스노보드",
-
-      english: "SNOWBOARD",
-
-      icon: "🏂",
-
-      season: "winter",
-
-      category: "board",
-
-      description:
-        "턴 · 중심 이동 · 엣지 컨트롤 분석",
-
-      metrics: [
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "edgeAngle",
-          name: "엣지 각도",
-          unit: "°"
-        },
-
-        {
-          key: "balance",
-          name: "균형",
-          unit: "%"
-        }
-
-      ],
-
-      angles: [
-
-        "왼쪽 무릎",
-        "오른쪽 무릎",
-        "고관절",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Heel Turn",
-        "Toe Turn",
-        "Transition"
-
-      ],
-
-      special: [
-
-        "terrain",
-        "trajectory"
-
-      ]
-
-    },
-
-
-
-    speedSkating: {
-
-      id: "speedSkating",
-
-      name: "스피드스케이팅",
-
-      english: "SPEED SKATING",
-
-      icon: "⛸",
-
-      season: "winter",
-
-      category: "skating",
-
-      description:
-        "푸시 · 글라이드 · 자세 높이 · 좌우 대칭 분석",
-
-      metrics: [
-
-        {
-          key: "cadence",
-          name: "케이던스",
-          unit: "spm"
-        },
-
-        {
-          key: "glide",
-          name: "글라이드",
-          unit: "m"
-        },
-
-        {
-          key: "pushTime",
-          name: "푸시 시간",
-          unit: "ms"
-        },
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        }
-
-      ],
-
-      angles: [
-
-        "왼쪽 무릎",
-        "오른쪽 무릎",
-        "왼쪽 고관절",
-        "오른쪽 고관절",
-        "몸통 기울기"
-
-      ],
-
-      techniques: [
-
-        "Straight",
-        "Corner",
-        "Push",
-        "Glide"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    shortTrack: {
-
-      id: "shortTrack",
-
-      name: "쇼트트랙",
-
-      english: "SHORT TRACK",
-
-      icon: "⛸",
-
-      season: "winter",
-
-      category: "skating",
-
-      description:
-        "코너링 · 중심 이동 · 푸시 동작 분석",
-
-      metrics: [
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "leanAngle",
-          name: "기울기",
-          unit: "°"
-        },
-
-        {
-          key: "cadence",
-          name: "케이던스",
-          unit: "spm"
-        }
-
-      ],
-
-      angles: [
-
-        "왼쪽 무릎",
-        "오른쪽 무릎",
-        "고관절",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Straight",
-        "Corner",
-        "Cross Over"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    figureSkating: {
-
-      id: "figureSkating",
-
-      name: "피겨스케이팅",
-
-      english: "FIGURE SKATING",
-
-      icon: "⛸",
-
-      season: "winter",
-
-      category: "skating",
-
-      description:
-        "점프 · 회전 · 착지 · 균형 분석",
-
-      metrics: [
-
-        {
-          key: "jumpHeight",
-          name: "점프 높이",
-          unit: "cm"
-        },
-
-        {
-          key: "rotation",
-          name: "회전",
-          unit: "°"
-        },
-
-        {
-          key: "landing",
-          name: "착지 안정성",
-          unit: "%"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Take Off",
-        "Rotation",
-        "Landing"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    skiJumping: {
-
-      id: "skiJumping",
-
-      name: "스키점프",
-
-      english: "SKI JUMPING",
-
-      icon: "🎿",
-
-      season: "winter",
-
-      category: "jump",
-
-      description:
-        "도약 · 비행 자세 · 착지 자세 분석",
-
-      metrics: [
-
-        {
-          key: "takeoffSpeed",
-          name: "도약 속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "takeoffAngle",
-          name: "도약 각도",
-          unit: "°"
-        },
-
-        {
-          key: "flightAngle",
-          name: "비행 각도",
-          unit: "°"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Approach",
-        "Take Off",
-        "Flight",
-        "Landing"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    skeleton: {
-
-      id: "skeleton",
-
-      name: "스켈레톤",
-
-      english: "SKELETON",
-
-      icon: "🛷",
-
-      season: "winter",
-
-      category: "sliding",
-
-      description:
-        "스타트 · 가속 · 푸시 자세 분석",
-
-      metrics: [
-
-        {
-          key: "startTime",
-          name: "스타트",
-          unit: "s"
-        },
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Start",
-        "Push",
-        "Load"
-
-      ],
-
-      special: [
-        "running",
-        "trajectory"
-      ]
-
-    },
-
-
-
-    bobsleigh: {
-
-      id: "bobsleigh",
-
-      name: "봅슬레이",
-
-      english: "BOBSLEIGH",
-
-      icon: "🛷",
-
-      season: "winter",
-
-      category: "sliding",
-
-      description:
-        "스타트 스프린트 · 푸시 · 탑승 분석",
-
-      metrics: [
-
-        {
-          key: "startTime",
-          name: "스타트",
-          unit: "s"
-        },
-
-        {
-          key: "cadence",
-          name: "케이던스",
-          unit: "spm"
-        },
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Start",
-        "Push",
-        "Load"
-
-      ],
-
-      special: [
-        "running",
-        "trajectory"
-      ]
-
-    },
-
-
-
-    luge: {
-
-      id: "luge",
-
-      name: "루지",
-
-      english: "LUGE",
-
-      icon: "🛷",
-
-      season: "winter",
-
-      category: "sliding",
-
-      description:
-        "스타트 동작 · 당기기 · 자세 안정성 분석",
-
-      metrics: [
-
-        {
-          key: "startTime",
-          name: "스타트",
-          unit: "s"
-        },
-
-        {
-          key: "pullPower",
-          name: "스타트 파워",
-          unit: "%"
-        }
-
-      ],
-
-      angles: [
-
-        "어깨",
-        "팔꿈치",
-        "고관절",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Start",
-        "Pull",
-        "Drive"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    curling: {
-
-      id: "curling",
-
-      name: "컬링",
-
-      english: "CURLING",
-
-      icon: "🥌",
-
-      season: "winter",
-
-      category: "precision",
-
-      description:
-        "딜리버리 · 슬라이드 · 균형 자세 분석",
-
-      metrics: [
-
-        {
-          key: "slideTime",
-          name: "슬라이드 시간",
-          unit: "s"
-        },
-
-        {
-          key: "balance",
-          name: "균형",
-          unit: "%"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "몸통",
-        "팔꿈치"
-
-      ],
-
-      techniques: [
-
-        "Delivery",
-        "Slide",
-        "Release"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    }
-
-  },
-
-
-
-  /* ========================================================
-     SUMMER
-  ======================================================== */
-
-  summer: {
-
-
-    sprint: {
-
-      id: "sprint",
-
-      name: "육상 단거리",
-
-      english: "SPRINT",
-
-      icon: "🏃",
-
-      season: "summer",
-
-      category: "running",
-
-      description:
-        "스타트 · 가속 · 최고속도 · 러닝 자세 분석",
-
-      metrics: [
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "cadence",
-          name: "케이던스",
-          unit: "spm"
-        },
-
-        {
-          key: "strideLength",
-          name: "보폭",
-          unit: "m"
-        },
-
-        {
-          key: "groundContactTime",
-          name: "접지시간",
-          unit: "ms"
-        },
-
-        {
-          key: "flightTime",
-          name: "비행시간",
-          unit: "ms"
-        }
-
-      ],
-
-      angles: [
-
-        "왼쪽 무릎",
-        "오른쪽 무릎",
-
-        "왼쪽 고관절",
-        "오른쪽 고관절",
-
-        "왼쪽 발목",
-        "오른쪽 발목",
-
-        "왼쪽 팔꿈치",
-        "오른쪽 팔꿈치",
-
-        "몸통 기울기"
-
-      ],
-
-      techniques: [
-
-        "Start",
-        "Acceleration",
-        "Max Velocity",
-        "Finish"
-
-      ],
-
-      special: [
-
-        "running",
-        "segment",
-        "trajectory"
-
-      ]
-
-    },
-
-
-
-    middleDistance: {
-
-      id: "middleDistance",
-
-      name: "육상 중거리",
-
-      english: "MIDDLE DISTANCE",
-
-      icon: "🏃",
-
-      season: "summer",
-
-      category: "running",
-
-      description:
-        "러닝 경제성 · 케이던스 · 보폭 분석",
-
-      metrics: [
-
-        {
-          key: "speed",
-          name: "속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "cadence",
-          name: "케이던스",
-          unit: "spm"
-        },
-
-        {
-          key: "strideLength",
-          name: "보폭",
-          unit: "m"
-        },
-
-        {
-          key: "groundContactTime",
-          name: "접지시간",
-          unit: "ms"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Acceleration",
-        "Cruise",
-        "Kick"
-
-      ],
-
-      special: [
-
-        "running",
-        "segment",
-        "trajectory"
-
-      ]
-
-    },
-
-
-
-    longDistance: {
-
-      id: "longDistance",
-
-      name: "육상 장거리",
-
-      english: "LONG DISTANCE",
-
-      icon: "🏃",
-
-      season: "summer",
-
-      category: "running",
-
-      description:
-        "러닝 경제성 · 페이스 · 보폭 · 접지 분석",
-
-      metrics: [
-
-        {
-          key: "pace",
-          name: "페이스",
-          unit: "min/km"
-        },
-
-        {
-          key: "cadence",
-          name: "케이던스",
-          unit: "spm"
-        },
-
-        {
-          key: "strideLength",
-          name: "보폭",
-          unit: "m"
-        },
-
-        {
-          key: "groundContactTime",
-          name: "접지시간",
-          unit: "ms"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Running",
-        "Uphill",
-        "Downhill",
-        "Finish"
-
-      ],
-
-      special: [
-
-        "running",
-        "segment",
-        "terrain",
-        "trajectory"
-
-      ]
-
-    },
-
-
-
-    hurdles: {
-
-      id: "hurdles",
-
-      name: "허들",
-
-      english: "HURDLES",
-
-      icon: "🏃",
-
-      season: "summer",
-
-      category: "running",
-
-      description:
-        "허들 진입 · 리드레그 · 트레일레그 · 착지 분석",
-
-      metrics: [
-
-        {
-          key: "approachSpeed",
-          name: "진입 속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "flightTime",
-          name: "허들 비행",
-          unit: "ms"
-        },
-
-        {
-          key: "landingTime",
-          name: "착지 시간",
-          unit: "ms"
-        }
-
-      ],
-
-      angles: [
-
-        "리드 무릎",
-        "트레일 무릎",
-        "고관절",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Approach",
-        "Take Off",
-        "Clearance",
-        "Landing"
-
-      ],
-
-      special: [
-        "running",
-        "trajectory"
-      ]
-
-    },
-
-
-
-    raceWalking: {
-
-      id: "raceWalking",
-
-      name: "경보",
-
-      english: "RACE WALKING",
-
-      icon: "🚶",
-
-      season: "summer",
-
-      category: "running",
-
-      description:
-        "접지 · 무릎 신전 · 골반 움직임 분석",
-
-      metrics: [
-
-        {
-          key: "cadence",
-          name: "케이던스",
-          unit: "spm"
-        },
-
-        {
-          key: "strideLength",
-          name: "보폭",
-          unit: "m"
-        },
-
-        {
-          key: "groundContactTime",
-          name: "접지시간",
-          unit: "ms"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Contact",
-        "Mid Stance",
-        "Push"
-
-      ],
-
-      special: [
-        "running",
-        "trajectory"
-      ]
-
-    },
-
-
-
-    longJump: {
-
-      id: "longJump",
-
-      name: "멀리뛰기",
-
-      english: "LONG JUMP",
-
-      icon: "🏃",
-
-      season: "summer",
-
-      category: "jump",
-
-      description:
-        "도움닫기 · 발구름 · 비행 · 착지 분석",
-
-      metrics: [
-
-        {
-          key: "approachSpeed",
-          name: "도움닫기 속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "takeoffAngle",
-          name: "도약각",
-          unit: "°"
-        },
-
-        {
-          key: "flightTime",
-          name: "비행시간",
-          unit: "s"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Approach",
-        "Take Off",
-        "Flight",
-        "Landing"
-
-      ],
-
-      special: [
-        "running",
-        "trajectory"
-      ]
-
-    },
-
-
-
-    tripleJump: {
-
-      id: "tripleJump",
-
-      name: "세단뛰기",
-
-      english: "TRIPLE JUMP",
-
-      icon: "🏃",
-
-      season: "summer",
-
-      category: "jump",
-
-      description:
-        "홉 · 스텝 · 점프 구간 분석",
-
-      metrics: [
-
-        {
-          key: "approachSpeed",
-          name: "진입속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "hopDistance",
-          name: "홉 거리",
-          unit: "m"
-        },
-
-        {
-          key: "stepDistance",
-          name: "스텝 거리",
-          unit: "m"
-        },
-
-        {
-          key: "jumpDistance",
-          name: "점프 거리",
-          unit: "m"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Hop",
-        "Step",
-        "Jump"
-
-      ],
-
-      special: [
-        "segment",
-        "trajectory"
-      ]
-
-    },
-
-
-
-    highJump: {
-
-      id: "highJump",
-
-      name: "높이뛰기",
-
-      english: "HIGH JUMP",
-
-      icon: "🏃",
-
-      season: "summer",
-
-      category: "jump",
-
-      description:
-        "도움닫기 · 도약 · 바 클리어런스 분석",
-
-      metrics: [
-
-        {
-          key: "approachSpeed",
-          name: "도움닫기 속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "takeoffAngle",
-          name: "도약각",
-          unit: "°"
-        },
-
-        {
-          key: "jumpHeight",
-          name: "높이",
-          unit: "m"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Approach",
-        "Take Off",
-        "Clearance",
-        "Landing"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    poleVault: {
-
-      id: "poleVault",
-
-      name: "장대높이뛰기",
-
-      english: "POLE VAULT",
-
-      icon: "🏃",
-
-      season: "summer",
-
-      category: "jump",
-
-      description:
-        "도움닫기 · 장대 삽입 · 도약 · 회전 분석",
-
-      metrics: [
-
-        {
-          key: "approachSpeed",
-          name: "도움닫기",
-          unit: "km/h"
-        },
-
-        {
-          key: "takeoffAngle",
-          name: "도약각",
-          unit: "°"
-        },
-
-        {
-          key: "height",
-          name: "높이",
-          unit: "m"
-        }
-
-      ],
-
-      angles: [
-
-        "어깨",
-        "팔꿈치",
-        "고관절",
-        "무릎"
-
-      ],
-
-      techniques: [
-
-        "Approach",
-        "Plant",
-        "Take Off",
-        "Swing",
-        "Clearance"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    shotPut: {
-
-      id: "shotPut",
-
-      name: "포환던지기",
-
-      english: "SHOT PUT",
-
-      icon: "⚫",
-
-      season: "summer",
-
-      category: "throw",
-
-      description:
-        "회전 · 릴리스 · 투사각 분석",
-
-      metrics: [
-
-        {
-          key: "releaseSpeed",
-          name: "릴리스 속도",
-          unit: "m/s"
-        },
-
-        {
-          key: "releaseAngle",
-          name: "릴리스 각도",
-          unit: "°"
-        }
-
-      ],
-
-      angles: [
-
-        "어깨",
-        "팔꿈치",
-        "고관절",
-        "무릎",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Glide",
-        "Rotation",
-        "Release"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    discus: {
-
-      id: "discus",
-
-      name: "원반던지기",
-
-      english: "DISCUS",
-
-      icon: "🥏",
-
-      season: "summer",
-
-      category: "throw",
-
-      description:
-        "회전 · 중심 이동 · 릴리스 분석",
-
-      metrics: [
-
-        {
-          key: "releaseSpeed",
-          name: "릴리스 속도",
-          unit: "m/s"
-        },
-
-        {
-          key: "releaseAngle",
-          name: "릴리스 각도",
-          unit: "°"
-        }
-
-      ],
-
-      angles: [
-
-        "어깨",
-        "고관절",
-        "무릎",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Wind Up",
-        "Rotation",
-        "Release"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    javelin: {
-
-      id: "javelin",
-
-      name: "창던지기",
-
-      english: "JAVELIN",
-
-      icon: "➶",
-
-      season: "summer",
-
-      category: "throw",
-
-      description:
-        "도움닫기 · 크로스스텝 · 릴리스 분석",
-
-      metrics: [
-
-        {
-          key: "approachSpeed",
-          name: "진입 속도",
-          unit: "km/h"
-        },
-
-        {
-          key: "releaseSpeed",
-          name: "릴리스 속도",
-          unit: "m/s"
-        },
-
-        {
-          key: "releaseAngle",
-          name: "릴리스 각도",
-          unit: "°"
-        }
-
-      ],
-
-      angles: [
-
-        "어깨",
-        "팔꿈치",
-        "고관절",
-        "무릎",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Approach",
-        "Cross Step",
-        "Block",
-        "Release"
-
-      ],
-
-      special: [
-        "running",
-        "trajectory"
-      ]
-
-    },
-
-
-
-    hammerThrow: {
-
-      id: "hammerThrow",
-
-      name: "해머던지기",
-
-      english: "HAMMER THROW",
-
-      icon: "⚫",
-
-      season: "summer",
-
-      category: "throw",
-
-      description:
-        "회전 · 중심축 · 릴리스 분석",
-
-      metrics: [
-
-        {
-          key: "rotationSpeed",
-          name: "회전 속도",
-          unit: "°/s"
-        },
-
-        {
-          key: "releaseSpeed",
-          name: "릴리스 속도",
-          unit: "m/s"
-        }
-
-      ],
-
-      angles: [
-
-        "어깨",
-        "고관절",
-        "무릎",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Wind",
-        "Turn",
-        "Release"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    weightlifting: {
-
-      id: "weightlifting",
-
-      name: "역도",
-
-      english: "WEIGHTLIFTING",
-
-      icon: "🏋️",
-
-      season: "summer",
-
-      category: "strength",
-
-      description:
-        "바벨 궤적 · 1차 풀 · 2차 풀 · 캐치 자세 분석",
-
-      metrics: [
-
-        {
-          key: "horizontalDeviation",
-          name: "바벨 수평 편차",
-          unit: "cm"
-        },
-
-        {
-          key: "peakVelocity",
-          name: "최대 속도",
-          unit: "m/s"
-        },
-
-        {
-          key: "firstPull",
-          name: "1차 풀",
-          unit: "s"
-        },
-
-        {
-          key: "secondPull",
-          name: "2차 풀",
-          unit: "s"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "어깨",
-        "팔꿈치",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "First Pull",
-        "Second Pull",
-        "Turnover",
-        "Catch",
-        "Recovery"
-
-      ],
-
-      special: [
-
-        "barbell",
-        "trajectory"
-
-      ]
-
-    },
-
-
-
-    swimming: {
-
-      id: "swimming",
-
-      name: "수영",
-
-      english: "SWIMMING",
-
-      icon: "🏊",
-
-      season: "summer",
-
-      category: "aquatic",
-
-      description:
-        "스트로크 · 회전 · 좌우 대칭 분석",
-
-      metrics: [
-
-        {
-          key: "strokeRate",
-          name: "스트로크율",
-          unit: "spm"
-        },
-
-        {
-          key: "strokeLength",
-          name: "스트로크 길이",
-          unit: "m"
-        }
-
-      ],
-
-      angles: [
-
-        "어깨",
-        "팔꿈치",
-        "고관절",
-        "무릎"
-
-      ],
-
-      techniques: [
-
-        "Catch",
-        "Pull",
-        "Push",
-        "Recovery"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    cycling: {
-
-      id: "cycling",
-
-      name: "사이클",
-
-      english: "CYCLING",
-
-      icon: "🚴",
-
-      season: "summer",
-
-      category: "cycling",
-
-      description:
-        "페달링 · 무릎 궤적 · 좌우 대칭 분석",
-
-      metrics: [
-
-        {
-          key: "cadence",
-          name: "케이던스",
-          unit: "rpm"
-        },
-
-        {
-          key: "powerBalance",
-          name: "좌우 밸런스",
-          unit: "%"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Downstroke",
-        "Bottom",
-        "Upstroke",
-        "Top"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    rowing: {
-
-      id: "rowing",
-
-      name: "조정",
-
-      english: "ROWING",
-
-      icon: "🚣",
-
-      season: "summer",
-
-      category: "rowing",
-
-      description:
-        "캐치 · 드라이브 · 피니시 · 리커버리 분석",
-
-      metrics: [
-
-        {
-          key: "strokeRate",
-          name: "스트로크율",
-          unit: "spm"
-        },
-
-        {
-          key: "driveTime",
-          name: "드라이브 시간",
-          unit: "ms"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "몸통",
-        "팔꿈치"
-
-      ],
-
-      techniques: [
-
-        "Catch",
-        "Drive",
-        "Finish",
-        "Recovery"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    football: createBallSport(
-
-      "football",
-      "축구",
-      "FOOTBALL",
-      "⚽"
-
-    ),
-
-
-
-    basketball: createBallSport(
-
-      "basketball",
-      "농구",
-      "BASKETBALL",
-      "🏀"
-
-    ),
-
-
-
-    volleyball: createBallSport(
-
-      "volleyball",
-      "배구",
-      "VOLLEYBALL",
-      "🏐"
-
-    ),
-
-
-
-    handball: createBallSport(
-
-      "handball",
-      "핸드볼",
-      "HANDBALL",
-      "🤾"
-
-    ),
-
-
-
-    baseball: createBallSport(
-
-      "baseball",
-      "야구",
-      "BASEBALL",
-      "⚾"
-
-    ),
-
-
-
-    tennis: createRacketSport(
-
-      "tennis",
-      "테니스",
-      "TENNIS",
-      "🎾"
-
-    ),
-
-
-
-    badminton: createRacketSport(
-
-      "badminton",
-      "배드민턴",
-      "BADMINTON",
-      "🏸"
-
-    ),
-
-
-
-    tableTennis: createRacketSport(
-
-      "tableTennis",
-      "탁구",
-      "TABLE TENNIS",
-      "🏓"
-
-    ),
-
-
-
-    taekwondo: createCombatSport(
-
-      "taekwondo",
-      "태권도",
-      "TAEKWONDO",
-      "🥋"
-
-    ),
-
-
-
-    judo: createCombatSport(
-
-      "judo",
-      "유도",
-      "JUDO",
-      "🥋"
-
-    ),
-
-
-
-    wrestling: createCombatSport(
-
-      "wrestling",
-      "레슬링",
-      "WRESTLING",
-      "🤼"
-
-    ),
-
-
-
-    boxing: createCombatSport(
-
-      "boxing",
-      "복싱",
-      "BOXING",
-      "🥊"
-
-    ),
-
-
-
-    fencing: {
-
-      id: "fencing",
-
-      name: "펜싱",
-
-      english: "FENCING",
-
-      icon: "🤺",
-
-      season: "summer",
-
-      category: "combat",
-
-      description:
-        "런지 · 스텝 · 공격 자세 분석",
-
-      metrics: [
-
-        {
-          key: "reaction",
-          name: "반응",
-          unit: "ms"
-        },
-
-        {
-          key: "lungeDistance",
-          name: "런지 거리",
-          unit: "m"
-        }
-
-      ],
-
-      angles: [
-
-        "무릎",
-        "고관절",
-        "어깨",
-        "팔꿈치"
-
-      ],
-
-      techniques: [
-
-        "Advance",
-        "Retreat",
-        "Lunge",
-        "Attack"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    },
-
-
-
-    gymnastics: {
-
-      id: "gymnastics",
-
-      name: "체조",
-
-      english: "GYMNASTICS",
-
-      icon: "🤸",
-
-      season: "summer",
-
-      category: "gymnastics",
-
-      description:
-        "회전 · 점프 · 착지 · 신체 정렬 분석",
-
-      metrics: [
-
-        {
-          key: "rotation",
-          name: "회전",
-          unit: "°"
-        },
-
-        {
-          key: "jumpHeight",
-          name: "점프 높이",
-          unit: "cm"
-        },
-
-        {
-          key: "landing",
-          name: "착지 안정성",
-          unit: "%"
-        }
-
-      ],
-
-      angles: [
-
-        "어깨",
-        "팔꿈치",
-        "고관절",
-        "무릎",
-        "발목",
-        "몸통"
-
-      ],
-
-      techniques: [
-
-        "Take Off",
-        "Flight",
-        "Rotation",
-        "Landing"
-
-      ],
-
-      special: [
-        "trajectory"
-      ]
-
-    }
+    stability: "안정성"
 
   }
 
 };
 
 
-/* ============================================================
-   02. SPORT TEMPLATE
-============================================================ */
 
-function createBallSport(
-  id,
+/* =========================================================
+   02. EXERCISE CREATOR
+========================================================= */
+
+function createExercise(
   name,
-  english,
-  icon
+  category,
+  target,
+  reason,
+  priority = 3
 ) {
 
   return {
 
-    id,
+    id:
+      name
+        .toLowerCase()
+        .replace(
+          /\s+/g,
+          "-"
+        )
+        .replace(
+          /[^a-z0-9가-힣-]/g,
+          ""
+        ),
+
     name,
-    english,
-    icon,
 
-    season:
-      "summer",
+    category,
 
-    category:
-      "ball",
+    target,
 
-    description:
-      `${name} 이동 · 점프 · 방향전환 · 자세 분석`,
+    reason,
 
-    metrics: [
-
-      {
-        key: "speed",
-        name: "이동 속도",
-        unit: "km/h"
-      },
-
-      {
-        key: "acceleration",
-        name: "가속",
-        unit: "m/s²"
-      },
-
-      {
-        key: "jumpHeight",
-        name: "점프 높이",
-        unit: "cm"
-      }
-
-    ],
-
-    angles: [
-
-      "왼쪽 무릎",
-      "오른쪽 무릎",
-      "고관절",
-      "발목",
-      "몸통"
-
-    ],
-
-    techniques: [
-
-      "Acceleration",
-      "Deceleration",
-      "Change Direction",
-      "Jump",
-      "Landing"
-
-    ],
-
-    special: [
-
-      "running",
-      "trajectory"
-
-    ]
+    priority
 
   };
 
 }
 
 
-function createRacketSport(
-  id,
-  name,
-  english,
-  icon
+
+/* =========================================================
+   03. COMMON TRAINING DATABASE
+========================================================= */
+
+const COMMON_TRAINING = [
+
+  createExercise(
+    "데드버그",
+    "코어",
+    "몸통 안정성",
+    "사지 움직임 중 몸통을 안정적으로 유지하는 능력을 향상합니다.",
+    2
+  ),
+
+  createExercise(
+    "버드독",
+    "코어",
+    "몸통·골반",
+    "몸통과 골반의 흔들림을 줄이는 데 도움이 됩니다.",
+    2
+  ),
+
+  createExercise(
+    "프론트 플랭크",
+    "코어",
+    "몸통",
+    "기본적인 몸통 안정성을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "사이드 플랭크",
+    "코어",
+    "측면 코어",
+    "좌우 몸통 안정성과 골반 제어 능력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "팔로프 프레스",
+    "코어",
+    "회전 저항",
+    "동작 중 불필요한 몸통 회전을 억제하는 능력을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "코펜하겐 플랭크",
+    "근력",
+    "내전근",
+    "골반 안정성과 내전근 기능을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "힙 브리지",
+    "근력",
+    "둔근",
+    "고관절 신전과 골반 안정성을 향상합니다.",
+    3
+  ),
+
+  createExercise(
+    "싱글레그 힙 브리지",
+    "근력",
+    "둔근·좌우 균형",
+    "좌우 둔근의 힘 차이를 줄이는 데 도움이 됩니다.",
+    2
+  ),
+
+  createExercise(
+    "힙 쓰러스트",
+    "근력",
+    "둔근",
+    "강한 고관절 신전 능력을 발달시킵니다.",
+    3
+  ),
+
+  createExercise(
+    "고블릿 스쿼트",
+    "근력",
+    "하체",
+    "기본적인 스쿼트 패턴과 하체 정렬을 개선합니다.",
+    3
+  ),
+
+  createExercise(
+    "템포 스쿼트",
+    "교정",
+    "무릎·고관절",
+    "천천히 동작하며 관절 정렬을 제어하는 능력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "스플릿 스쿼트",
+    "근력",
+    "하체",
+    "한쪽 다리의 근력과 골반 안정성을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "불가리안 스플릿 스쿼트",
+    "근력",
+    "하체·균형",
+    "좌우 하체 근력 차이를 줄이는 데 유용합니다.",
+    2
+  ),
+
+  createExercise(
+    "리버스 런지",
+    "근력",
+    "하체",
+    "한쪽 다리 지지 능력과 고관절 제어 능력을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "워킹 런지",
+    "근력",
+    "하체·균형",
+    "이동 중 한쪽 다리 안정성을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "스텝업",
+    "근력",
+    "둔근·대퇴사두근",
+    "한쪽 다리로 지면을 밀어내는 힘을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "싱글레그 RDL",
+    "균형",
+    "햄스트링·둔근",
+    "한쪽 다리 균형과 후면사슬 제어를 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "싱글레그 밸런스",
+    "균형",
+    "발목·골반",
+    "한쪽 다리 지지 시 흔들림을 줄이는 데 도움이 됩니다.",
+    2
+  ),
+
+  createExercise(
+    "밴드 사이드워크",
+    "근력",
+    "중둔근",
+    "무릎과 골반의 좌우 안정성을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "몬스터 워크",
+    "근력",
+    "둔근",
+    "하지 정렬을 유지하는 둔근 기능을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "카프 레이즈",
+    "근력",
+    "종아리",
+    "발목 추진력과 하퇴 근력을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "싱글레그 카프 레이즈",
+    "근력",
+    "발목",
+    "좌우 발목 힘의 차이를 확인하고 개선합니다.",
+    2
+  ),
+
+  createExercise(
+    "발목 가동성 드릴",
+    "가동성",
+    "발목",
+    "발목 배측굴곡 가동범위를 개선합니다.",
+    1
+  ),
+
+  createExercise(
+    "고관절 가동성 드릴",
+    "가동성",
+    "고관절",
+    "고관절 움직임의 제한을 줄입니다.",
+    2
+  ),
+
+  createExercise(
+    "90/90 힙 모빌리티",
+    "가동성",
+    "고관절",
+    "고관절 내·외회전 가동성을 개선합니다.",
+    3
+  ),
+
+  createExercise(
+    "흉추 회전 드릴",
+    "가동성",
+    "흉추",
+    "상체 움직임에 필요한 흉추 회전을 개선합니다.",
+    3
+  ),
+
+  createExercise(
+    "햄스트링 모빌리티",
+    "가동성",
+    "햄스트링",
+    "후면사슬 움직임을 부드럽게 만드는 데 도움이 됩니다.",
+    3
+  ),
+
+  createExercise(
+    "월 앵클 드릴",
+    "가동성",
+    "발목",
+    "스쿼트와 달리기에서 필요한 발목 움직임을 개선합니다.",
+    2
+  ),
+
+  createExercise(
+    "스케이터 점프",
+    "플라이오메트릭",
+    "측면 파워",
+    "좌우 방향의 폭발적인 힘과 착지 안정성을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "포고 점프",
+    "플라이오메트릭",
+    "발목 탄성",
+    "발목의 빠른 반응과 탄성을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "스쿼트 점프",
+    "플라이오메트릭",
+    "하체 파워",
+    "하체 폭발력을 강화합니다.",
+    3
+  )
+
+];
+
+
+
+/* =========================================================
+   04. BIATHLON TRAINING
+========================================================= */
+
+const BIATHLON_TRAINING = [
+
+  createExercise(
+    "원스케이트 기술 드릴",
+    "기술",
+    "V2 기술",
+    "좌우 스키 글라이드와 폴링 타이밍을 연결합니다.",
+    1
+  ),
+
+  createExercise(
+    "투스케이트 기술 드릴",
+    "기술",
+    "V1 기술",
+    "오르막 구간에서 효율적인 추진 패턴을 연습합니다.",
+    1
+  ),
+
+  createExercise(
+    "노폴 스케이팅",
+    "기술",
+    "하체 스키 기술",
+    "폴 없이 하체 체중이동과 글라이드를 집중적으로 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "싱글스키 글라이드",
+    "균형",
+    "스키 밸런스",
+    "한쪽 스키 위에서 안정적으로 중심을 유지하는 능력을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "더블폴링 기술 드릴",
+    "기술",
+    "폴링",
+    "상체와 코어를 연결한 폴링 동작을 개선합니다.",
+    1
+  ),
+
+  createExercise(
+    "폴링 타이밍 드릴",
+    "기술",
+    "폴링 타이밍",
+    "스키 추진과 폴 접촉 타이밍을 맞추는 훈련입니다.",
+    1
+  ),
+
+  createExercise(
+    "업힐 스케이팅 반복",
+    "지구력",
+    "오르막",
+    "오르막에서 기술을 유지하면서 추진하는 능력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "경사 변화 주법 전환",
+    "기술",
+    "주법 전환",
+    "코스 경사 변화에 따라 주법을 빠르게 전환하는 능력을 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "스키 바운드",
+    "플라이오메트릭",
+    "스키 추진력",
+    "스키와 유사한 대각선 방향의 추진력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "스키 에르고 인터벌",
+    "지구력",
+    "상체 지구력",
+    "폴링에 필요한 상체 지구력과 파워를 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "랫풀다운",
+    "근력",
+    "광배근",
+    "폴링 동작에 필요한 당기는 힘을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "시티드 케이블 로우",
+    "근력",
+    "등",
+    "견갑과 등 근육의 힘을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "트라이셉스 프레스다운",
+    "근력",
+    "삼두근",
+    "폴링 후반부 팔꿈치 신전 힘을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "메디신볼 슬램",
+    "파워",
+    "상체·코어",
+    "상체와 코어의 빠른 힘 전달 능력을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "사격 자세 안정화 드릴",
+    "안정성",
+    "사격 자세",
+    "정적인 자세에서 몸의 흔들림을 줄이는 연습입니다.",
+    1
+  ),
+
+  createExercise(
+    "호흡 후 자세 안정화",
+    "안정성",
+    "피로 후 안정성",
+    "강한 운동 후 빠르게 자세를 안정시키는 능력을 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "스키 후 안정화 루틴",
+    "기술",
+    "전환",
+    "스키 동작 이후 안정된 자세로 전환하는 능력을 연습합니다.",
+    2
+  ),
+
+  createExercise(
+    "업힐 폴링 파워",
+    "근력",
+    "상체 추진",
+    "오르막에서 폴을 이용한 추진 능력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "롤러스키 밸런스 드릴",
+    "균형",
+    "스키 균형",
+    "비시즌에도 스키와 유사한 중심 이동을 훈련합니다.",
+    2
+  )
+
+];
+
+
+
+/* =========================================================
+   05. CROSS COUNTRY
+========================================================= */
+
+const CROSS_COUNTRY_TRAINING = [
+
+  ...BIATHLON_TRAINING.filter(
+    item =>
+      !item.name.includes(
+        "사격"
+      ) &&
+      !item.name.includes(
+        "호흡 후"
+      )
+  ),
+
+  createExercise(
+    "장거리 더블폴링",
+    "지구력",
+    "폴링 지구력",
+    "장시간 폴링 동작을 유지하는 능력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "테크닉 인터벌",
+    "기술",
+    "기술 유지",
+    "피로가 누적된 상황에서도 기술을 유지하도록 훈련합니다.",
+    2
+  )
+
+];
+
+
+
+/* =========================================================
+   06. ROLLER SKI
+========================================================= */
+
+const ROLLER_SKI_TRAINING = [
+
+  createExercise(
+    "롤러스키 원스케이트",
+    "기술",
+    "V2",
+    "원스케이트 리듬과 체중이동을 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "롤러스키 투스케이트",
+    "기술",
+    "V1",
+    "오르막에서 투스케이트 동작을 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "노폴 롤러스키",
+    "기술",
+    "하체",
+    "폴 없이 하체 중심이동을 집중적으로 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "싱글레그 롤러스키 글라이드",
+    "균형",
+    "한발 지지",
+    "한쪽 롤러스키 위에서 중심을 유지합니다.",
+    1
+  ),
+
+  createExercise(
+    "롤러스키 폴링 타이밍",
+    "기술",
+    "폴링",
+    "폴 접촉과 하체 추진 타이밍을 연결합니다.",
+    1
+  ),
+
+  createExercise(
+    "업힐 롤러스키",
+    "지구력",
+    "오르막",
+    "오르막 기술과 파워를 동시에 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "롤러스키 주법 전환",
+    "기술",
+    "전환",
+    "경사에 따른 기술 전환 능력을 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "롤러스키 슬라럼",
+    "균형",
+    "방향 제어",
+    "롤러스키 방향 제어와 균형 능력을 향상합니다.",
+    3
+  ),
+
+  createExercise(
+    "롤러스키 저속 밸런스",
+    "균형",
+    "중심 제어",
+    "낮은 속도에서 중심을 정밀하게 제어합니다.",
+    2
+  ),
+
+  ...COMMON_TRAINING.filter(
+    item =>
+      [
+        "코어",
+        "균형",
+        "플라이오메트릭"
+      ].includes(
+        item.category
+      )
+  )
+
+];
+
+
+
+/* =========================================================
+   07. SHOOTING
+========================================================= */
+
+const SHOOTING_TRAINING = [
+
+  createExercise(
+    "정적 자세 유지",
+    "안정성",
+    "전신 안정성",
+    "일정한 자세를 반복적으로 유지하는 능력을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "호흡 리듬 훈련",
+    "기술",
+    "호흡",
+    "호흡과 자세 안정의 연결을 연습합니다.",
+    1
+  ),
+
+  createExercise(
+    "견갑 안정성 드릴",
+    "안정성",
+    "어깨",
+    "어깨 주변의 안정성을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "밴드 외회전",
+    "근력",
+    "회전근개",
+    "어깨 관절을 안정시키는 근육을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "월 슬라이드",
+    "가동성",
+    "견갑·흉추",
+    "견갑 움직임과 상체 정렬을 개선합니다.",
+    3
+  ),
+
+  createExercise(
+    "팔로프 프레스",
+    "코어",
+    "회전 안정성",
+    "몸통 회전을 억제하는 능력을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "싱글레그 밸런스",
+    "균형",
+    "하지 안정성",
+    "하체 중심 제어 능력을 향상합니다.",
+    2
+  ),
+
+  createExercise(
+    "피로 후 자세 안정화",
+    "안정성",
+    "전환 능력",
+    "운동 직후에도 자세를 빠르게 안정시키는 능력을 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "자세 반복 재현 드릴",
+    "기술",
+    "자세 재현성",
+    "매번 비슷한 자세를 만드는 능력을 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "눈 감고 균형 드릴",
+    "균형",
+    "고유수용성",
+    "시각 정보 의존도를 낮추고 균형 감각을 훈련합니다.",
+    3
+  )
+
+];
+
+
+
+/* =========================================================
+   08. RUNNING
+========================================================= */
+
+const RUNNING_TRAINING = [
+
+  createExercise(
+    "A-Skip",
+    "기술",
+    "러닝 자세",
+    "무릎 드라이브와 지면 접촉 리듬을 연습합니다.",
+    1
+  ),
+
+  createExercise(
+    "B-Skip",
+    "기술",
+    "러닝 자세",
+    "발의 회수와 지면 접촉 패턴을 연습합니다.",
+    2
+  ),
+
+  createExercise(
+    "Wall Drill",
+    "기술",
+    "가속 자세",
+    "가속 구간의 몸 기울기와 무릎 드라이브를 연습합니다.",
+    1
+  ),
+
+  createExercise(
+    "March Drill",
+    "기술",
+    "러닝 패턴",
+    "기본적인 달리기 자세와 리듬을 교정합니다.",
+    2
+  ),
+
+  createExercise(
+    "Acceleration Drill",
+    "스피드",
+    "가속",
+    "초반 가속 능력을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "Flying Sprint",
+    "스피드",
+    "최고속도",
+    "최고속도 구간의 러닝 기술을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "Bounding",
+    "플라이오메트릭",
+    "보폭·파워",
+    "수평 방향의 추진력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "Pogo Jump",
+    "플라이오메트릭",
+    "발목 탄성",
+    "짧은 접지시간과 발목 탄성을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "Single Leg Hop",
+    "플라이오메트릭",
+    "한발 파워",
+    "한쪽 다리의 추진력과 착지 안정성을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "Nordic Hamstring",
+    "근력",
+    "햄스트링",
+    "햄스트링의 편심성 근력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "Hip Flexor Drive",
+    "근력",
+    "고관절 굴곡근",
+    "무릎 드라이브에 필요한 힘을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "Calf Isometric",
+    "근력",
+    "종아리",
+    "발목과 종아리의 등척성 힘을 강화합니다.",
+    3
+  )
+
+];
+
+
+
+/* =========================================================
+   09. WEIGHTLIFTING
+========================================================= */
+
+const WEIGHTLIFTING_TRAINING = [
+
+  createExercise(
+    "템포 백스쿼트",
+    "교정",
+    "하체 정렬",
+    "느린 속도로 관절 정렬과 중심 이동을 확인합니다.",
+    1
+  ),
+
+  createExercise(
+    "프론트 스쿼트",
+    "근력",
+    "하체·몸통",
+    "클린 캐치에 필요한 하체와 몸통 근력을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "오버헤드 스쿼트",
+    "기술",
+    "전신 안정성",
+    "스내치 동작에 필요한 전신 가동성과 안정성을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "스내치 밸런스",
+    "기술",
+    "오버헤드 안정성",
+    "스내치 캐치 자세를 빠르게 만드는 능력을 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "행 스내치",
+    "기술",
+    "2차 풀",
+    "폭발적인 고관절 신전과 캐치 타이밍을 연습합니다.",
+    2
+  ),
+
+  createExercise(
+    "행 클린",
+    "기술",
+    "2차 풀",
+    "클린의 폭발적인 신전과 캐치 동작을 연습합니다.",
+    2
+  ),
+
+  createExercise(
+    "클린 풀",
+    "근력",
+    "당기기",
+    "클린의 바벨 가속 능력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "스내치 풀",
+    "근력",
+    "당기기",
+    "스내치의 당기기 동작을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "하이 풀",
+    "파워",
+    "상체·고관절",
+    "바벨의 수직 가속을 강화합니다.",
+    3
+  ),
+
+  createExercise(
+    "포즈 데드리프트",
+    "교정",
+    "바벨 궤적",
+    "특정 위치에서 정지해 바벨과 신체 위치를 확인합니다.",
+    1
+  ),
+
+  createExercise(
+    "클린 데드리프트",
+    "근력",
+    "1차 풀",
+    "클린의 시작 구간 힘을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "스내치 데드리프트",
+    "근력",
+    "1차 풀",
+    "스내치 시작 구간의 자세와 힘을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "프론트랙 모빌리티",
+    "가동성",
+    "어깨·손목",
+    "클린 캐치 자세의 가동성을 개선합니다.",
+    2
+  ),
+
+  createExercise(
+    "흉추 모빌리티",
+    "가동성",
+    "흉추",
+    "오버헤드 자세에 필요한 흉추 움직임을 개선합니다.",
+    2
+  )
+
+];
+
+
+
+/* =========================================================
+   10. JUMP SPORTS
+========================================================= */
+
+const JUMP_TRAINING = [
+
+  createExercise(
+    "Approach Run Drill",
+    "기술",
+    "도움닫기",
+    "일정한 도움닫기 리듬을 만드는 훈련입니다.",
+    1
+  ),
+
+  createExercise(
+    "Bounding",
+    "플라이오메트릭",
+    "수평 파워",
+    "도약에 필요한 수평 추진력을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "Single Leg Bound",
+    "플라이오메트릭",
+    "한발 파워",
+    "도약 다리의 폭발적인 힘을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "Depth Landing",
+    "플라이오메트릭",
+    "착지",
+    "착지 시 무릎과 골반 정렬을 훈련합니다.",
+    2
+  ),
+
+  createExercise(
+    "Box Jump",
+    "플라이오메트릭",
+    "수직 파워",
+    "폭발적인 하체 신전 능력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "Step-Up Jump",
+    "플라이오메트릭",
+    "한발 추진",
+    "한쪽 다리의 빠른 추진 능력을 강화합니다.",
+    2
+  )
+
+];
+
+
+
+/* =========================================================
+   11. THROW SPORTS
+========================================================= */
+
+const THROW_TRAINING = [
+
+  createExercise(
+    "메디신볼 로테이션 스로우",
+    "파워",
+    "회전 파워",
+    "하체에서 상체로 이어지는 회전 힘 전달을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "메디신볼 오버헤드 스로우",
+    "파워",
+    "전신 파워",
+    "전신 신전과 상체 파워를 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "케이블 로테이션",
+    "코어",
+    "회전",
+    "몸통 회전 힘과 제어 능력을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "랜드마인 로테이션",
+    "근력",
+    "몸통·어깨",
+    "전신 회전 패턴을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "스플릿 스탠스 프레스",
+    "근력",
+    "전신 연결",
+    "하지와 상지의 힘 전달을 강화합니다.",
+    3
+  )
+
+];
+
+
+
+/* =========================================================
+   12. TEAM SPORTS
+========================================================= */
+
+const TEAM_SPORT_TRAINING = [
+
+  createExercise(
+    "5-10-5 셔틀",
+    "스피드",
+    "방향전환",
+    "빠른 감속과 방향전환 능력을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "L-Drill",
+    "스피드",
+    "민첩성",
+    "다방향 움직임과 방향전환 능력을 훈련합니다.",
+    2
+  ),
+
+  createExercise(
+    "Deceleration Drill",
+    "기술",
+    "감속",
+    "빠른 움직임 이후 안전하게 감속하는 능력을 강화합니다.",
+    1
+  ),
+
+  createExercise(
+    "Lateral Bound",
+    "플라이오메트릭",
+    "측면 파워",
+    "측면 추진과 착지 안정성을 강화합니다.",
+    2
+  ),
+
+  createExercise(
+    "Single Leg Landing",
+    "교정",
+    "착지 안정성",
+    "한발 착지 시 하지 정렬을 훈련합니다.",
+    1
+  ),
+
+  createExercise(
+    "Reactive Shuffle",
+    "스피드",
+    "반응",
+    "상황에 반응해 빠르게 방향을 바꾸는 능력을 훈련합니다.",
+    2
+  )
+
+];
+
+
+
+/* =========================================================
+   13. SPORT DATABASE MAPPING
+========================================================= */
+
+const SPORT_TRAINING_DATABASE = {
+
+  biathlon:
+    BIATHLON_TRAINING,
+
+  crossCountry:
+    CROSS_COUNTRY_TRAINING,
+
+  rollerSki:
+    ROLLER_SKI_TRAINING,
+
+  shooting:
+    SHOOTING_TRAINING,
+
+  sprint:
+    RUNNING_TRAINING,
+
+  middleDistance:
+    RUNNING_TRAINING,
+
+  longDistance:
+    RUNNING_TRAINING,
+
+  hurdles:
+    RUNNING_TRAINING,
+
+  raceWalking:
+    RUNNING_TRAINING,
+
+  weightlifting:
+    WEIGHTLIFTING_TRAINING,
+
+  longJump:
+    JUMP_TRAINING,
+
+  tripleJump:
+    JUMP_TRAINING,
+
+  highJump:
+    JUMP_TRAINING,
+
+  poleVault:
+    JUMP_TRAINING,
+
+  shotPut:
+    THROW_TRAINING,
+
+  discus:
+    THROW_TRAINING,
+
+  javelin:
+    THROW_TRAINING,
+
+  hammerThrow:
+    THROW_TRAINING,
+
+  football:
+    TEAM_SPORT_TRAINING,
+
+  basketball:
+    TEAM_SPORT_TRAINING,
+
+  volleyball:
+    TEAM_SPORT_TRAINING,
+
+  handball:
+    TEAM_SPORT_TRAINING,
+
+  baseball:
+    TEAM_SPORT_TRAINING,
+
+  tennis:
+    TEAM_SPORT_TRAINING,
+
+  badminton:
+    TEAM_SPORT_TRAINING,
+
+  tableTennis:
+    TEAM_SPORT_TRAINING,
+
+  taekwondo:
+    TEAM_SPORT_TRAINING,
+
+  judo:
+    TEAM_SPORT_TRAINING,
+
+  wrestling:
+    TEAM_SPORT_TRAINING,
+
+  boxing:
+    TEAM_SPORT_TRAINING,
+
+  fencing:
+    TEAM_SPORT_TRAINING,
+
+  gymnastics:
+    COMMON_TRAINING,
+
+  swimming:
+    COMMON_TRAINING,
+
+  cycling:
+    COMMON_TRAINING,
+
+  rowing:
+    COMMON_TRAINING,
+
+  alpineSki:
+    TEAM_SPORT_TRAINING,
+
+  snowboard:
+    TEAM_SPORT_TRAINING,
+
+  speedSkating:
+    TEAM_SPORT_TRAINING,
+
+  shortTrack:
+    TEAM_SPORT_TRAINING,
+
+  figureSkating:
+    COMMON_TRAINING,
+
+  skiJumping:
+    JUMP_TRAINING,
+
+  skeleton:
+    COMMON_TRAINING,
+
+  bobsleigh:
+    COMMON_TRAINING,
+
+  luge:
+    COMMON_TRAINING,
+
+  curling:
+    COMMON_TRAINING
+
+};
+
+
+
+/* =========================================================
+   14. WEAKNESS TRAINING
+========================================================= */
+
+function getWeaknessExercises(
+  analysis
 ) {
 
-  return {
+  const results = [];
 
-    id,
-    name,
-    english,
-    icon,
-
-    season:
-      "summer",
-
-    category:
-      "racket",
-
-    description:
-      `${name} 스윙 · 스텝 · 회전 동작 분석`,
-
-    metrics: [
-
-      {
-        key: "swingSpeed",
-        name: "스윙 속도",
-        unit: "m/s"
-      },
-
-      {
-        key: "rotationSpeed",
-        name: "몸통 회전",
-        unit: "°/s"
-      }
-
-    ],
-
-    angles: [
-
-      "어깨",
-      "팔꿈치",
-      "고관절",
-      "무릎",
-      "몸통"
-
-    ],
-
-    techniques: [
-
-      "Preparation",
-      "Swing",
-      "Impact",
-      "Follow Through"
-
-    ],
-
-    special: [
-      "trajectory"
-    ]
-
-  };
-
-}
+  const scores =
+    analysis?.scores ||
+    {};
 
 
-function createCombatSport(
-  id,
-  name,
-  english,
-  icon
-) {
-
-  return {
-
-    id,
-    name,
-    english,
-    icon,
-
-    season:
-      "summer",
-
-    category:
-      "combat",
-
-    description:
-      `${name} 공격 · 방어 · 중심 이동 자세 분석`,
-
-    metrics: [
-
-      {
-        key: "reaction",
-        name: "반응시간",
-        unit: "ms"
-      },
-
-      {
-        key: "balance",
-        name: "균형",
-        unit: "%"
-      },
-
-      {
-        key: "rotationSpeed",
-        name: "회전 속도",
-        unit: "°/s"
-      }
-
-    ],
-
-    angles: [
-
-      "어깨",
-      "팔꿈치",
-      "고관절",
-      "무릎",
-      "발목",
-      "몸통"
-
-    ],
-
-    techniques: [
-
-      "Ready",
-      "Attack",
-      "Defense",
-      "Recovery"
-
-    ],
-
-    special: [
-      "trajectory"
-    ]
-
-  };
-
-}
+  const angles =
+    analysis?.angles ||
+    {};
 
 
-/* ============================================================
-   03. DATABASE API
-============================================================ */
-
-function getAllSports() {
-
-  return {
-
-    ...SPORTS_DATABASE.winter,
-    ...SPORTS_DATABASE.summer
-
-  };
-
-}
+  const metrics =
+    analysis?.metrics ||
+    {};
 
 
-function getSport(
-  sportId
-) {
+  /* -----------------------------------------------------
+     SYMMETRY
+  ----------------------------------------------------- */
 
-  return (
-    SPORTS_DATABASE.winter[
-      sportId
-    ] ||
+  if (
+    Number(
+      scores.symmetry
+    ) <
+    88
+  ) {
 
-    SPORTS_DATABASE.summer[
-      sportId
-    ] ||
+    results.push(
 
-    null
-  );
+      createExercise(
+        "싱글레그 RDL",
+        "교정",
+        "좌우 대칭",
+        "좌우 움직임 차이를 줄이기 위한 한발 지지 훈련입니다.",
+        0
+      ),
 
-}
+      createExercise(
+        "불가리안 스플릿 스쿼트",
+        "근력",
+        "좌우 하체 근력",
+        "각 다리를 독립적으로 강화해 좌우 힘 차이를 줄입니다.",
+        0
+      ),
 
+      createExercise(
+        "싱글레그 밸런스",
+        "균형",
+        "좌우 균형",
+        "한쪽 다리 지지 시 중심 제어 능력을 강화합니다.",
+        0
+      ),
 
-function getSportsBySeason(
-  season
-) {
+      createExercise(
+        "스텝다운",
+        "교정",
+        "하지 정렬",
+        "한쪽 다리로 내려가는 과정에서 무릎과 골반 정렬을 연습합니다.",
+        1
+      )
 
-  return (
-    SPORTS_DATABASE[
-      season
-    ] ||
-    {}
-  );
-
-}
-
-
-/* ============================================================
-   04. SPORT CARD
-============================================================ */
-
-function createSportCard(
-  sport
-) {
-
-  const button =
-    document.createElement(
-      "button"
     );
-
-
-  button.type =
-    "button";
-
-
-  button.className =
-    "sport-selector-card";
-
-
-  button.dataset.selectSport =
-    sport.id;
-
-
-  button.dataset.season =
-    sport.season;
-
-
-  button.innerHTML = `
-
-    <div class="sport-card-icon">
-      ${sport.icon || "◆"}
-    </div>
-
-    <div class="sport-card-content">
-
-      <small>
-        ${sport.english}
-      </small>
-
-      <strong>
-        ${sport.name}
-      </strong>
-
-      <p>
-        ${sport.description}
-      </p>
-
-    </div>
-
-    <span class="sport-card-arrow">
-      →
-    </span>
-
-  `;
-
-
-  return button;
-
-}
-
-
-/* ============================================================
-   05. RENDER SPORT SELECTOR
-============================================================ */
-
-function renderSportSelector(
-  season
-) {
-
-  const container =
-    document.querySelector(
-      `[data-sport-selector="${season}"]`
-    );
-
-
-  if (!container) {
-
-    return;
 
   }
 
 
-  container.innerHTML =
-    "";
+  /* -----------------------------------------------------
+     STABILITY
+  ----------------------------------------------------- */
+
+  if (
+    Number(
+      scores.stability
+    ) <
+    88
+  ) {
+
+    results.push(
+
+      createExercise(
+        "팔로프 프레스",
+        "코어",
+        "몸통 안정성",
+        "불필요한 몸통 회전을 억제하는 능력을 강화합니다.",
+        0
+      ),
+
+      createExercise(
+        "데드버그",
+        "코어",
+        "몸통 안정성",
+        "사지 움직임 중 몸통을 안정적으로 유지합니다.",
+        0
+      ),
+
+      createExercise(
+        "버드독",
+        "코어",
+        "골반 안정성",
+        "몸통과 골반의 흔들림을 줄이는 데 도움이 됩니다.",
+        1
+      ),
+
+      createExercise(
+        "사이드 플랭크",
+        "코어",
+        "측면 안정성",
+        "측면 몸통과 골반 안정성을 강화합니다.",
+        1
+      )
+
+    );
+
+  }
 
 
-  const sports =
-    Object.values(
-      getSportsBySeason(
-        season
+  /* -----------------------------------------------------
+     POSTURE
+  ----------------------------------------------------- */
+
+  if (
+    Number(
+      scores.posture
+    ) <
+    88
+  ) {
+
+    results.push(
+
+      createExercise(
+        "템포 스쿼트",
+        "교정",
+        "관절 정렬",
+        "느린 속도로 무릎과 골반 위치를 확인합니다.",
+        0
+      ),
+
+      createExercise(
+        "월 스쿼트 자세 드릴",
+        "교정",
+        "스쿼트 패턴",
+        "기본적인 하체 정렬을 반복적으로 학습합니다.",
+        1
+      ),
+
+      createExercise(
+        "고관절 가동성 드릴",
+        "가동성",
+        "고관절",
+        "고관절 움직임을 개선해 보상 동작을 줄입니다.",
+        1
+      ),
+
+      createExercise(
+        "발목 가동성 드릴",
+        "가동성",
+        "발목",
+        "하지 자세에 필요한 발목 움직임을 개선합니다.",
+        1
+      )
+
+    );
+
+  }
+
+
+  /* -----------------------------------------------------
+     TECHNIQUE
+  ----------------------------------------------------- */
+
+  if (
+    Number(
+      scores.technique
+    ) <
+    88
+  ) {
+
+    results.push(
+
+      createExercise(
+        "저속 기술 반복",
+        "기술",
+        "동작 패턴",
+        "속도를 낮춰 정확한 동작 순서를 반복합니다.",
+        0
+      ),
+
+      createExercise(
+        "구간별 동작 드릴",
+        "기술",
+        "기술 연결",
+        "전체 동작을 여러 구간으로 나눠 정확성을 높입니다.",
+        1
+      ),
+
+      createExercise(
+        "영상 피드백 반복",
+        "기술",
+        "동작 수정",
+        "분석 영상을 확인하며 자세를 반복적으로 수정합니다.",
+        1
+      )
+
+    );
+
+  }
+
+
+  /* -----------------------------------------------------
+     KNEE DIFFERENCE
+  ----------------------------------------------------- */
+
+  const kneeDifference =
+    Math.abs(
+      Number(
+        angles.leftKnee ||
+        0
+      ) -
+      Number(
+        angles.rightKnee ||
+        0
       )
     );
 
 
-  sports.forEach(
-    sport => {
+  if (
+    kneeDifference >
+    10
+  ) {
 
-      container.appendChild(
-        createSportCard(
-          sport
-        )
-      );
+    results.push(
 
-    }
-  );
+      createExercise(
+        "싱글레그 스쿼트 패턴",
+        "교정",
+        "무릎",
+        "좌우 무릎 굴곡 패턴 차이를 확인하고 교정합니다.",
+        0
+      ),
+
+      createExercise(
+        "스텝다운 컨트롤",
+        "교정",
+        "무릎 정렬",
+        "한발 지지 상태에서 무릎 위치를 제어합니다.",
+        0
+      )
+
+    );
+
+  }
+
+
+  /* -----------------------------------------------------
+     HIP DIFFERENCE
+  ----------------------------------------------------- */
+
+  const hipDifference =
+    Math.abs(
+      Number(
+        angles.leftHip ||
+        0
+      ) -
+      Number(
+        angles.rightHip ||
+        0
+      )
+    );
+
+
+  if (
+    hipDifference >
+    10
+  ) {
+
+    results.push(
+
+      createExercise(
+        "90/90 힙 모빌리티",
+        "가동성",
+        "고관절",
+        "좌우 고관절 움직임 차이를 줄이는 데 도움이 됩니다.",
+        0
+      ),
+
+      createExercise(
+        "싱글레그 힙 브리지",
+        "근력",
+        "둔근",
+        "좌우 둔근 기능을 독립적으로 강화합니다.",
+        1
+      )
+
+    );
+
+  }
+
+
+  /* -----------------------------------------------------
+     BODY STABILITY
+  ----------------------------------------------------- */
+
+  if (
+    Number(
+      metrics.bodyStability
+    ) <
+    85
+  ) {
+
+    results.push(
+
+      createExercise(
+        "하프니링 팔로프 프레스",
+        "코어",
+        "몸통",
+        "좁은 지지면에서 몸통 회전을 제어합니다.",
+        1
+      ),
+
+      createExercise(
+        "베어 플랭크",
+        "코어",
+        "몸통",
+        "사지 움직임 전 몸통 안정성을 강화합니다.",
+        2
+      )
+
+    );
+
+  }
+
+
+  return results;
 
 }
 
 
-/* ============================================================
-   06. ANALYSIS SPORT UI
-============================================================ */
 
-function renderSelectedSport(
-  sportId
+/* =========================================================
+   15. REMOVE DUPLICATES
+========================================================= */
+
+function removeDuplicateExercises(
+  exercises
 ) {
 
-  const sport =
-    getSport(
-      sportId
-    );
+  const map =
+    new Map();
 
 
-  if (!sport) {
-
-    return;
-
-  }
-
-
-  renderSportTitle(
-    sport
-  );
-
-
-  renderMetrics(
-    sport
-  );
-
-
-  renderAngles(
-    sport
-  );
-
-
-  renderTechniques(
-    sport
-  );
-
-
-  renderSpecialPanels(
-    sport
-  );
-
-}
-
-
-/* ============================================================
-   07. SPORT TITLE
-============================================================ */
-
-function renderSportTitle(
-  sport
-) {
-
-  const title =
-    document.querySelector(
-      "[data-sport-analysis-title]"
-    );
-
-
-  const season =
-    document.querySelector(
-      "[data-sport-analysis-season]"
-    );
-
-
-  if (title) {
-
-    title.textContent =
-      sport.name;
-
-  }
-
-
-  if (season) {
-
-    season.textContent =
-      sport.season ===
-      "winter"
-        ? "WINTER SPORTS"
-        : "SUMMER SPORTS";
-
-  }
-
-}
-
-
-/* ============================================================
-   08. METRICS
-============================================================ */
-
-function renderMetrics(
-  sport
-) {
-
-  const container =
-    document.querySelector(
-      "[data-sport-metrics]"
-    );
-
-
-  if (!container) {
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    "";
-
-
-  sport.metrics.forEach(
-    metric => {
-
-      const item =
-        document.createElement(
-          "div"
-        );
-
-
-      item.className =
-        "metric-card";
-
-
-      item.innerHTML = `
-
-        <span>
-          ${metric.name}
-        </span>
-
-        <strong
-          data-metric-value="${metric.key}"
-        >
-          --
-        </strong>
-
-        <small>
-          ${metric.unit}
-        </small>
-
-      `;
-
-
-      container.appendChild(
-        item
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   09. ANGLES
-============================================================ */
-
-function renderAngles(
-  sport
-) {
-
-  const container =
-    document.querySelector(
-      "[data-sport-angles]"
-    );
-
-
-  if (!container) {
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    "";
-
-
-  sport.angles.forEach(
-    (
-      angle,
-      index
-    ) => {
+  exercises.forEach(
+    exercise => {
 
       const key =
-        `angle_${index}`;
+        exercise.name
+          .trim()
+          .toLowerCase();
 
 
-      const item =
-        document.createElement(
-          "div"
+      if (
+        !map.has(
+          key
+        )
+      ) {
+
+        map.set(
+          key,
+          exercise
         );
 
+      }
 
-      item.className =
-        "angle-card";
+      else {
 
-
-      item.innerHTML = `
-
-        <span>
-          ${angle}
-        </span>
-
-        <strong
-          data-angle-value="${key}"
-        >
-          --
-        </strong>
-
-        <small>
-          °
-        </small>
-
-      `;
+        const existing =
+          map.get(
+            key
+          );
 
 
-      container.appendChild(
-        item
-      );
+        if (
+          exercise.priority <
+          existing.priority
+        ) {
 
-    }
-  );
-
-}
-
-
-/* ============================================================
-   10. TECHNIQUES
-============================================================ */
-
-function renderTechniques(
-  sport
-) {
-
-  const containers =
-    document.querySelectorAll(
-      "[data-sport-techniques]"
-    );
-
-
-  containers.forEach(
-    container => {
-
-      container.innerHTML =
-        "";
-
-
-      sport.techniques.forEach(
-        technique => {
-
-          const item =
-            document.createElement(
-              "span"
-            );
-
-
-          item.className =
-            "technique-chip";
-
-
-          item.textContent =
-            technique;
-
-
-          container.appendChild(
-            item
+          map.set(
+            key,
+            exercise
           );
 
         }
-      );
+
+      }
 
     }
   );
 
+
+  return [
+    ...map.values()
+  ];
+
 }
 
 
-/* ============================================================
-   11. SPECIAL PANELS
-============================================================ */
 
-function renderSpecialPanels(
-  sport
+/* =========================================================
+   16. BUILD RECOMMENDATIONS
+========================================================= */
+
+function buildTrainingRecommendations(
+  analysis =
+    window.SeolcheonAnalysisState
 ) {
 
-  const panels =
-    document.querySelectorAll(
-      "[data-sport-special]"
+  if (!analysis) {
+
+    return [];
+
+  }
+
+
+  const sportId =
+    analysis
+      .selectedSport
+      ?.id ||
+
+    window.SeolcheonState
+      ?.selectedSportId ||
+
+    null;
+
+
+  const weakness =
+    getWeaknessExercises(
+      analysis
     );
 
 
-  panels.forEach(
-    panel => {
+  const sportExercises =
+    SPORT_TRAINING_DATABASE[
+      sportId
+    ] ||
+    [];
 
-      const type =
-        panel.dataset
-          .sportSpecial;
+
+  const combined = [
+
+    ...weakness,
+
+    ...sportExercises,
+
+    ...COMMON_TRAINING
+
+  ];
 
 
-      panel.hidden =
-        !sport.special.includes(
-          type
-        );
+  const unique =
+    removeDuplicateExercises(
+      combined
+    );
+
+
+  unique.sort(
+    (a, b) =>
+      a.priority -
+      b.priority
+  );
+
+
+  const recommendations =
+    unique.slice(
+      0,
+      TRAINING_CONFIG
+        .maxRecommendations
+    );
+
+
+  recommendations.forEach(
+    (exercise, index) => {
+
+      exercise.rank =
+        index + 1;
+
+
+      exercise.priorityLabel =
+
+        index <
+        TRAINING_CONFIG
+          .priorityLimit
+
+          ? "우선 추천"
+
+          : "보조 추천";
 
     }
   );
 
-}
 
-
-/* ============================================================
-   12. ATHLETE STATE
-============================================================ */
-
-let athleteEditId =
-  null;
-
-
-let athleteSearchText =
-  "";
-
-
-let athleteFilter =
-  "all";
-
-
-/* ============================================================
-   13. GET ATHLETES
-============================================================ */
-
-function getAthletes() {
-
-  return (
-    window.SeolcheonApp
-      ?.state
-      ?.athletes ||
-    []
-  );
+  return recommendations;
 
 }
 
 
-/* ============================================================
-   14. SAVE ATHLETES
-============================================================ */
 
-function saveAthletes() {
+/* =========================================================
+   17. UPDATE ANALYSIS STATE
+========================================================= */
 
-  window.SeolcheonApp
-    ?.saveAthletes?.();
+function updateAnalysisTraining() {
+
+  const analysis =
+    window.SeolcheonAnalysisState;
 
 
-  window.SeolcheonApp
-    ?.refreshDashboard?.();
+  if (!analysis) {
+
+    return [];
+
+  }
+
+
+  const recommendations =
+    buildTrainingRecommendations(
+      analysis
+    );
+
+
+  analysis.training =
+    recommendations;
+
+
+  return recommendations;
 
 }
 
 
-/* ============================================================
-   15. ATHLETE FORM
-============================================================ */
 
-function getAthleteForm() {
+/* =========================================================
+   18. TRAINING PANEL CREATOR
+========================================================= */
 
-  return document.querySelector(
-    "[data-athlete-form]"
-  );
+function ensureTrainingPanel() {
 
-}
-
-
-/* ============================================================
-   16. FORM → OBJECT
-============================================================ */
-
-function getAthleteFormData() {
-
-  const form =
-    getAthleteForm();
+  let panel =
+    document.querySelector(
+      "[data-training-recommendation-panel]"
+    );
 
 
-  if (!form) {
+  if (panel) {
+
+    return panel;
+
+  }
+
+
+  const analysisPage =
+    document.querySelector(
+      '[data-page="analysis"]'
+    );
+
+
+  if (!analysisPage) {
 
     return null;
 
   }
 
 
-  const data =
-    new FormData(
-      form
+  const bottomActions =
+    analysisPage.querySelector(
+      ".analysis-bottom-actions"
     );
 
 
-  const sportId =
-    data.get(
-      "sport"
-    );
-
-
-  const sport =
-    getSport(
-      sportId
-    );
-
-
-  return {
-
-    name:
-      String(
-        data.get("name") ||
-        ""
-      ).trim(),
-
-    school:
-      String(
-        data.get("school") ||
-        "설천고"
-      ).trim(),
-
-    grade:
-      String(
-        data.get("grade") ||
-        ""
-      ),
-
-    gender:
-      String(
-        data.get("gender") ||
-        ""
-      ),
-
-    birthDate:
-      String(
-        data.get("birthDate") ||
-        ""
-      ),
-
-    season:
-      String(
-        data.get("season") ||
-        sport?.season ||
-        ""
-      ),
-
-    sport:
-      sportId,
-
-    sportName:
-      sport?.name ||
-      sportId,
-
-    event:
-      String(
-        data.get("event") ||
-        ""
-      ).trim(),
-
-    height:
-      Number(
-        data.get("height")
-      ) ||
-      null,
-
-    weight:
-      Number(
-        data.get("weight")
-      ) ||
-      null,
-
-    career:
-      String(
-        data.get("career") ||
-        ""
-      ).trim(),
-
-    team:
-      String(
-        data.get("team") ||
-        ""
-      ).trim(),
-
-    memo:
-      String(
-        data.get("memo") ||
-        ""
-      ).trim()
-
-  };
-
-}
-
-
-/* ============================================================
-   17. REGISTER / UPDATE ATHLETE
-============================================================ */
-
-function submitAthlete(
-  event
-) {
-
-  event.preventDefault();
-
-
-  const athlete =
-    getAthleteFormData();
-
-
-  if (
-    !athlete ||
-    !athlete.name
-  ) {
-
-    showAthleteMessage(
-      "선수 이름을 입력해주세요.",
-      true
-    );
-
-    return;
-
-  }
-
-
-  if (!athlete.sport) {
-
-    showAthleteMessage(
-      "종목을 선택해주세요.",
-      true
-    );
-
-    return;
-
-  }
-
-
-  const athletes =
-    getAthletes();
-
-
-  if (athleteEditId) {
-
-    const index =
-      athletes.findIndex(
-        item =>
-          item.id ===
-          athleteEditId
-      );
-
-
-    if (
-      index !== -1
-    ) {
-
-      athletes[index] = {
-
-        ...athletes[index],
-        ...athlete,
-
-        updatedAt:
-          new Date()
-            .toISOString()
-
-      };
-
-    }
-
-
-    showAthleteMessage(
-      "선수 정보가 수정되었습니다."
-    );
-
-  }
-
-  else {
-
-    const id =
-      window.SeolcheonApp
-        ?.utils
-        ?.uid?.(
-          "athlete"
-        ) ||
-
-      `athlete_${Date.now()}`;
-
-
-    athletes.unshift({
-
-      id,
-
-      ...athlete,
-
-      createdAt:
-        new Date()
-          .toISOString()
-
-    });
-
-
-    showAthleteMessage(
-      "선수가 등록되었습니다."
-    );
-
-  }
-
-
-  saveAthletes();
-
-
-  resetAthleteForm();
-
-
-  renderAthletes();
-
-}
-
-
-/* ============================================================
-   18. ATHLETE MESSAGE
-============================================================ */
-
-function showAthleteMessage(
-  message,
-  error = false
-) {
-
-  const element =
-    document.querySelector(
-      "[data-athlete-message]"
-    );
-
-
-  if (!element) {
-
-    return;
-
-  }
-
-
-  element.textContent =
-    message;
-
-
-  element.classList.toggle(
-    "error",
-    error
-  );
-
-
-  if (!error) {
-
-    setTimeout(
-      () => {
-
-        if (
-          element.textContent ===
-          message
-        ) {
-
-          element.textContent =
-            "";
-
-        }
-
-      },
-      2500
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   19. RESET FORM
-============================================================ */
-
-function resetAthleteForm() {
-
-  const form =
-    getAthleteForm();
-
-
-  form?.reset();
-
-
-  athleteEditId =
-    null;
-
-
-  const school =
-    form?.elements?.school;
-
-
-  if (school) {
-
-    school.value =
-      "설천고";
-
-  }
-
-
-  const team =
-    form?.elements?.team;
-
-
-  if (team) {
-
-    team.value =
-      "설천고";
-
-  }
-
-
-  const button =
-    document.querySelector(
-      "[data-athlete-submit]"
-    );
-
-
-  if (button) {
-
-    button.textContent =
-      "선수 등록";
-
-  }
-
-}
-
-
-/* ============================================================
-   20. ATHLETE FILTER
-============================================================ */
-
-function getFilteredAthletes() {
-
-  const athletes =
-    [...getAthletes()];
-
-
-  return athletes.filter(
-    athlete => {
-
-      const searchTarget =
-        [
-          athlete.name,
-          athlete.school,
-          athlete.team,
-          athlete.sportName,
-          athlete.event
-        ]
-          .join(" ")
-          .toLowerCase();
-
-
-      const searchMatch =
-        !athleteSearchText ||
-        searchTarget.includes(
-          athleteSearchText
-        );
-
-
-      let filterMatch =
-        true;
-
-
-      if (
-        athleteFilter ===
-        "winter"
-      ) {
-
-        filterMatch =
-          athlete.season ===
-          "winter";
-
-      }
-
-      else if (
-        athleteFilter ===
-        "summer"
-      ) {
-
-        filterMatch =
-          athlete.season ===
-          "summer";
-
-      }
-
-      else if (
-        athleteFilter !==
-        "all"
-      ) {
-
-        filterMatch =
-          athlete.sport ===
-          athleteFilter;
-
-      }
-
-
-      return (
-        searchMatch &&
-        filterMatch
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   21. ATHLETE CARD
-============================================================ */
-
-function createAthleteCard(
-  athlete
-) {
-
-  const sport =
-    getSport(
-      athlete.sport
-    );
-
-
-  const article =
+  panel =
     document.createElement(
       "article"
     );
 
 
-  article.className =
-    "athlete-card";
+  panel.className =
+    "panel training-recommendation-panel";
 
 
-  article.innerHTML = `
-
-    <div class="athlete-card-top">
-
-      <div class="athlete-avatar">
-        ${
-          athlete.name
-            ?.charAt(0) ||
-          "A"
-        }
-      </div>
+  panel.setAttribute(
+    "data-training-recommendation-panel",
+    ""
+  );
 
 
-      <div class="athlete-card-name">
+  panel.innerHTML = `
+
+    <div class="panel-header">
+
+      <div>
 
         <small>
-          ${sport?.english || "ATHLETE"}
+          SMART TRAINING RECOMMENDATION
         </small>
 
-        <strong>
-          ${athlete.name}
+        <h3>
+          분석 기반 추천 훈련
+        </h3>
+
+      </div>
+
+      <div class="training-count">
+
+        <strong
+          data-training-count
+        >
+          0
         </strong>
 
         <span>
-          ${athlete.school || ""}
-          ${athlete.grade || ""}
+          EXERCISES
         </span>
 
       </div>
@@ -3563,67 +1914,46 @@ function createAthleteCard(
     </div>
 
 
-    <div class="athlete-card-data">
+    <div class="training-summary">
 
       <div>
 
         <span>
-          종목
+          우선 개선
         </span>
 
-        <strong>
-          ${
-            athlete.sportName ||
-            sport?.name ||
-            "-"
-          }
+        <strong
+          data-training-focus
+        >
+          분석 대기
         </strong>
 
       </div>
 
-
       <div>
 
         <span>
-          세부 종목
+          선택 종목
         </span>
 
-        <strong>
-          ${athlete.event || "-"}
+        <strong
+          data-training-sport
+        >
+          -
         </strong>
 
       </div>
 
-
       <div>
 
         <span>
-          신장
+          종합 점수
         </span>
 
-        <strong>
-          ${
-            athlete.height
-              ? athlete.height + " cm"
-              : "-"
-          }
-        </strong>
-
-      </div>
-
-
-      <div>
-
-        <span>
-          체중
-        </span>
-
-        <strong>
-          ${
-            athlete.weight
-              ? athlete.weight + " kg"
-              : "-"
-          }
+        <strong
+          data-training-score
+        >
+          --
         </strong>
 
       </div>
@@ -3631,660 +1961,548 @@ function createAthleteCard(
     </div>
 
 
-    <div class="athlete-card-actions">
+    <div class="training-filter">
 
       <button
         type="button"
-        class="primary-button"
-        data-athlete-analysis="${athlete.id}"
+        class="active"
+        data-training-filter="all"
       >
-        자세분석
+        전체
       </button>
-
 
       <button
         type="button"
-        class="ghost-button"
-        data-athlete-edit="${athlete.id}"
+        data-training-filter="priority"
       >
-        수정
+        우선 추천
       </button>
-
 
       <button
         type="button"
-        class="ghost-button"
-        data-athlete-delete="${athlete.id}"
+        data-training-filter="기술"
       >
-        삭제
+        기술
       </button>
+
+      <button
+        type="button"
+        data-training-filter="근력"
+      >
+        근력
+      </button>
+
+      <button
+        type="button"
+        data-training-filter="코어"
+      >
+        코어
+      </button>
+
+      <button
+        type="button"
+        data-training-filter="균형"
+      >
+        밸런스
+      </button>
+
+      <button
+        type="button"
+        data-training-filter="플라이오메트릭"
+      >
+        플라이오
+      </button>
+
+      <button
+        type="button"
+        data-training-filter="가동성"
+      >
+        가동성
+      </button>
+
+    </div>
+
+
+    <div
+      class="training-recommendation-grid"
+      data-training-recommendation-list
+    >
+
+      <div class="empty-state">
+
+        자세분석을 시작하면
+        추천 훈련이 표시됩니다.
+
+      </div>
 
     </div>
 
   `;
 
 
-  article.addEventListener(
-    "click",
-    event => {
+  if (bottomActions) {
 
-      if (
-        event.target.closest(
-          "button"
-        )
-      ) {
+    analysisPage.insertBefore(
+      panel,
+      bottomActions
+    );
 
-        return;
+  }
 
-      }
+  else {
 
+    analysisPage.appendChild(
+      panel
+    );
 
-      window.SeolcheonApp
-        ?.selectAthlete?.(
-          athlete
-        );
-
-    }
-  );
+  }
 
 
-  return article;
+  return panel;
 
 }
 
 
-/* ============================================================
-   22. RENDER ATHLETES
-============================================================ */
 
-function renderAthletes() {
+/* =========================================================
+   19. FIND WEAKEST AREA
+========================================================= */
 
-  const container =
-    document.querySelector(
-      "[data-athlete-list]"
-    );
+function getWeakestArea(
+  analysis
+) {
+
+  const scores =
+    analysis?.scores;
 
 
-  if (!container) {
+  if (!scores) {
+
+    return "분석 대기";
+
+  }
+
+
+  const labels = {
+
+    posture:
+      "자세 안정성",
+
+    symmetry:
+      "좌우 대칭",
+
+    technique:
+      "기술 수행",
+
+    stability:
+      "동작 안정성",
+
+    efficiency:
+      "효율성",
+
+    elite:
+      "엘리트 근접도"
+
+  };
+
+
+  const entries =
+    Object.entries(
+      scores
+    )
+      .filter(
+        ([, value]) =>
+          Number.isFinite(
+            Number(value)
+          )
+      );
+
+
+  if (!entries.length) {
+
+    return "분석 대기";
+
+  }
+
+
+  entries.sort(
+    (a, b) =>
+      Number(a[1]) -
+      Number(b[1])
+  );
+
+
+  return (
+    labels[
+      entries[0][0]
+    ] ||
+    entries[0][0]
+  );
+
+}
+
+
+
+/* =========================================================
+   20. TRAINING CARD
+========================================================= */
+
+function createTrainingCard(
+  exercise
+) {
+
+  const priorityClass =
+    exercise.priorityLabel ===
+    "우선 추천"
+      ? "priority"
+      : "";
+
+
+  return `
+
+    <article
+      class="training-card ${priorityClass}"
+      data-training-category="${exercise.category}"
+      data-training-priority="${exercise.priorityLabel}"
+    >
+
+      <div class="training-card-top">
+
+        <span class="training-rank">
+          ${String(
+            exercise.rank
+          ).padStart(
+            2,
+            "0"
+          )}
+        </span>
+
+        <span class="training-category">
+          ${exercise.category}
+        </span>
+
+        <span class="training-priority">
+          ${exercise.priorityLabel}
+        </span>
+
+      </div>
+
+
+      <h4>
+        ${exercise.name}
+      </h4>
+
+
+      <div class="training-target">
+
+        <span>
+          TARGET
+        </span>
+
+        <strong>
+          ${exercise.target}
+        </strong>
+
+      </div>
+
+
+      <p>
+        ${exercise.reason}
+      </p>
+
+    </article>
+
+  `;
+
+}
+
+
+
+/* =========================================================
+   21. RENDER TRAINING
+========================================================= */
+
+function renderTrainingRecommendations(
+  filter =
+    "all"
+) {
+
+  ensureTrainingPanel();
+
+
+  const analysis =
+    window.SeolcheonAnalysisState;
+
+
+  if (!analysis) {
 
     return;
 
   }
 
 
-  const athletes =
-    getFilteredAthletes();
+  const recommendations =
+    updateAnalysisTraining();
 
 
-  container.innerHTML =
-    "";
+  const list =
+    document.querySelector(
+      "[data-training-recommendation-list]"
+    );
+
+
+  if (!list) {
+
+    return;
+
+  }
+
+
+  let filtered =
+    recommendations;
 
 
   if (
-    athletes.length ===
-    0
+    filter ===
+    "priority"
   ) {
 
-    container.innerHTML = `
+    filtered =
+      recommendations.filter(
+        item =>
+          item.priorityLabel ===
+          "우선 추천"
+      );
+
+  }
+
+
+  else if (
+    filter !==
+    "all"
+  ) {
+
+    filtered =
+      recommendations.filter(
+        item =>
+          item.category ===
+          filter
+      );
+
+  }
+
+
+  if (
+    !filtered.length
+  ) {
+
+    list.innerHTML = `
 
       <div class="empty-state">
-        등록된 선수가 없습니다.
+
+        해당 분류의 추천 훈련이 없습니다.
+
       </div>
 
     `;
 
-    return;
-
   }
 
+  else {
 
-  athletes.forEach(
-    athlete => {
-
-      container.appendChild(
-        createAthleteCard(
-          athlete
+    list.innerHTML =
+      filtered
+        .map(
+          createTrainingCard
         )
-      );
+        .join("");
 
-    }
+  }
+
+
+  updateTrainingSummary(
+    recommendations
   );
 
 }
 
 
-/* ============================================================
-   23. EDIT ATHLETE
-============================================================ */
 
-function editAthlete(
-  athleteId
+/* =========================================================
+   22. SUMMARY
+========================================================= */
+
+function updateTrainingSummary(
+  recommendations
 ) {
 
-  const athlete =
-    getAthletes()
-      .find(
-        item =>
-          item.id ===
-          athleteId
-      );
+  const analysis =
+    window.SeolcheonAnalysisState;
 
 
-  if (!athlete) {
-
-    return;
-
-  }
-
-
-  const form =
-    getAthleteForm();
-
-
-  if (!form) {
-
-    return;
-
-  }
-
-
-  athleteEditId =
-    athlete.id;
-
-
-  Object.entries(
-    athlete
-  ).forEach(
-    ([key, value]) => {
-
-      const input =
-        form.elements[
-          key
-        ];
-
-
-      if (!input) {
-
-        return;
-
-      }
-
-
-      input.value =
-        value ?? "";
-
-    }
-  );
-
-
-  const submit =
+  const count =
     document.querySelector(
-      "[data-athlete-submit]"
+      "[data-training-count]"
     );
 
 
-  if (submit) {
+  const focus =
+    document.querySelector(
+      "[data-training-focus]"
+    );
 
-    submit.textContent =
-      "선수 정보 수정";
+
+  const sport =
+    document.querySelector(
+      "[data-training-sport]"
+    );
+
+
+  const score =
+    document.querySelector(
+      "[data-training-score]"
+    );
+
+
+  if (count) {
+
+    count.textContent =
+      recommendations.length;
 
   }
 
 
-  form.scrollIntoView({
-
-    behavior:
-      "smooth",
-
-    block:
-      "start"
-
-  });
-
-}
-
-
-/* ============================================================
-   24. DELETE ATHLETE
-============================================================ */
-
-function deleteAthlete(
-  athleteId
-) {
-
-  const athletes =
-    getAthletes();
-
-
-  const athlete =
-    athletes.find(
-      item =>
-        item.id ===
-        athleteId
-    );
-
-
-  if (!athlete) {
-
-    return;
-
-  }
-
-
-  const confirmed =
-    window.confirm(
-      `${athlete.name} 선수를 삭제할까요?`
-    );
-
-
-  if (!confirmed) {
-
-    return;
-
-  }
-
-
-  const index =
-    athletes.findIndex(
-      item =>
-        item.id ===
-        athleteId
-    );
-
-
-  if (
-    index !== -1
-  ) {
-
-    athletes.splice(
-      index,
-      1
-    );
-
-  }
-
-
-  if (
-    window.SeolcheonApp
-      ?.state
-      ?.selectedAthlete
-      ?.id ===
-    athleteId
-  ) {
-
-    window.SeolcheonApp
-      .state
-      .selectedAthlete =
-      null;
-
-  }
-
-
-  saveAthletes();
-
-
-  window.SeolcheonApp
-    ?.refreshSelectedAthleteUI?.();
-
-
-  renderAthletes();
-
-}
-
-
-/* ============================================================
-   25. SPORT SELECT CHANGE
-============================================================ */
-
-function initializeSportFormSync() {
-
-  const form =
-    getAthleteForm();
-
-
-  const sportSelect =
-    form?.elements?.sport;
-
-
-  const seasonSelect =
-    form?.elements?.season;
-
-
-  const sportName =
-    form?.elements?.sportName;
-
-
-  sportSelect?.addEventListener(
-    "change",
-    () => {
-
-      const sport =
-        getSport(
-          sportSelect.value
-        );
-
-
-      if (!sport) {
-
-        return;
-
-      }
-
-
-      if (seasonSelect) {
-
-        seasonSelect.value =
-          sport.season;
-
-      }
-
-
-      if (sportName) {
-
-        sportName.value =
-          sport.name;
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   26. ATHLETE EVENTS
-============================================================ */
-
-function initializeAthleteEvents() {
-
-  const form =
-    getAthleteForm();
-
-
-  form?.addEventListener(
-    "submit",
-    submitAthlete
-  );
-
-
-  document
-    .querySelector(
-      "[data-athlete-cancel]"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
-
-        resetAthleteForm();
-
-        showAthleteMessage(
-          ""
-        );
-
-      }
-    );
-
-
-  document
-    .querySelector(
-      "[data-athlete-search]"
-    )
-    ?.addEventListener(
-      "input",
-      event => {
-
-        athleteSearchText =
-          String(
-            event.target.value ||
-            ""
-          )
-            .trim()
-            .toLowerCase();
-
-
-        renderAthletes();
-
-      }
-    );
-
-
-  document
-    .querySelector(
-      "[data-athlete-sport-filter]"
-    )
-    ?.addEventListener(
-      "change",
-      event => {
-
-        athleteFilter =
-          event.target.value;
-
-
-        renderAthletes();
-
-      }
-    );
-
-
-  document.addEventListener(
-    "click",
-    event => {
-
-
-      const edit =
-        event.target.closest(
-          "[data-athlete-edit]"
-        );
-
-
-      if (edit) {
-
-        editAthlete(
-          edit.dataset
-            .athleteEdit
-        );
-
-        return;
-
-      }
-
-
-      const remove =
-        event.target.closest(
-          "[data-athlete-delete]"
-        );
-
-
-      if (remove) {
-
-        deleteAthlete(
-          remove.dataset
-            .athleteDelete
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   27. LISTEN SPORT CHANGE
-============================================================ */
-
-function initializeSportEvents() {
-
-  window.addEventListener(
-    "seolcheon:sport-selected",
-    event => {
-
-      const sportId =
-        event.detail
-          ?.sport;
-
-
-      if (!sportId) {
-
-        return;
-
-      }
-
-
-      renderSelectedSport(
-        sportId
+  if (focus) {
+
+    focus.textContent =
+      getWeakestArea(
+        analysis
       );
 
-    }
-  );
+  }
+
+
+  if (sport) {
+
+    sport.textContent =
+      analysis
+        ?.selectedSport
+        ?.name ||
+
+      window.SeolcheonState
+        ?.selectedSportName ||
+
+      "-";
+
+  }
+
+
+  if (score) {
+
+    score.textContent =
+      Number.isFinite(
+        Number(
+          analysis
+            ?.overallScore
+        )
+      )
+        ? analysis.overallScore
+        : "--";
+
+  }
 
 }
 
 
-/* ============================================================
-   28. PUBLIC API
-============================================================ */
 
-window.SportsDatabase = {
+/* =========================================================
+   23. FILTER BUTTON
+========================================================= */
 
-  database:
-    SPORTS_DATABASE,
+document.addEventListener(
+  "click",
+  event => {
 
-
-  getAllSports,
-
-
-  getSport,
-
-
-  getSportsBySeason,
+    const button =
+      event.target.closest(
+        "[data-training-filter]"
+      );
 
 
-  renderSelectedSport
-
-};
-
-
-/* ============================================================
-   29. SPORTS MANAGER
-============================================================ */
-
-window.SportsManager = {
-
-
-  initialized:
-    false,
-
-
-  init() {
-
-    if (
-      this.initialized
-    ) {
+    if (!button) {
 
       return;
 
     }
 
 
-    this.initialized =
-      true;
+    document
+      .querySelectorAll(
+        "[data-training-filter]"
+      )
+      .forEach(
+        item => {
 
+          item.classList.remove(
+            "active"
+          );
 
-    renderSportSelector(
-      "winter"
-    );
-
-
-    renderSportSelector(
-      "summer"
-    );
-
-
-    initializeSportFormSync();
-
-
-    initializeAthleteEvents();
-
-
-    initializeSportEvents();
-
-
-    renderAthletes();
-
-
-    const selectedSport =
-      window.SeolcheonApp
-        ?.state
-        ?.selectedSport;
-
-
-    if (selectedSport) {
-
-      renderSelectedSport(
-        selectedSport
+        }
       );
 
-    }
 
-
-    console.log(
-      "[SPORTS] READY"
+    button.classList.add(
+      "active"
     );
 
-  },
+
+    renderTrainingRecommendations(
+      button.dataset
+        .trainingFilter
+    );
+
+  }
+);
 
 
-  refresh() {
 
-    renderAthletes();
+/* =========================================================
+   24. ANALYSIS EVENT
+========================================================= */
 
+window.addEventListener(
+  "seolcheon:sport-selected",
+  () => {
 
-    const sport =
-      window.SeolcheonApp
-        ?.state
-        ?.selectedSport;
+    setTimeout(
+      () => {
 
+        renderTrainingRecommendations();
 
-    if (sport) {
+      },
+      100
+    );
 
-      renderSelectedSport(
-        sport
-      );
-
-    }
-
-  },
-
-
-  renderAthletes,
+  }
+);
 
 
-  renderSportSelector,
+
+/* =========================================================
+   25. AUTOMATIC REFRESH
+
+   분석값이 계속 변하므로 너무 빠르게 DOM을
+   다시 그리지 않고 일정 간격으로 갱신한다.
+========================================================= */
+
+let trainingRefreshTimer =
+  null;
 
 
-  renderSelectedSport,
-
-
-  getSport
-
-};
-
-
-/* ============================================================
-   30. FALLBACK INITIALIZATION
-
-   app.js보다 sports.js 로딩이 늦은 경우에도
-   초기화되도록 처리.
-============================================================ */
-
-function bootSportsModule() {
+function startTrainingRefresh() {
 
   if (
-    window.SportsManager
-      ?.initialized
+    trainingRefreshTimer
   ) {
 
     return;
@@ -4292,31 +2510,153 @@ function bootSportsModule() {
   }
 
 
-  window.SportsManager
-    ?.init?.();
+  trainingRefreshTimer =
+    setInterval(
+      () => {
+
+        const analysisPage =
+          document.querySelector(
+            '[data-page="analysis"]'
+          );
+
+
+        if (
+          !analysisPage ||
+          analysisPage.hidden
+        ) {
+
+          return;
+
+        }
+
+
+        const analysis =
+          window.SeolcheonAnalysisState;
+
+
+        if (
+          !analysis ||
+          !analysis.landmarks
+        ) {
+
+          return;
+
+        }
+
+
+        const activeFilter =
+          document.querySelector(
+            "[data-training-filter].active"
+          )
+            ?.dataset
+            ?.trainingFilter ||
+          "all";
+
+
+        renderTrainingRecommendations(
+          activeFilter
+        );
+
+      },
+      1500
+    );
 
 }
+
+
+
+/* =========================================================
+   26. REPORT INTEGRATION
+========================================================= */
+
+function getTrainingForReport() {
+
+  const analysis =
+    window.SeolcheonAnalysisState;
+
+
+  if (!analysis) {
+
+    return [];
+
+  }
+
+
+  return updateAnalysisTraining();
+
+}
+
+
+
+/* =========================================================
+   27. PUBLIC API
+========================================================= */
+
+window.SeolcheonTraining = {
+
+  config:
+    TRAINING_CONFIG,
+
+  database:
+    SPORT_TRAINING_DATABASE,
+
+  common:
+    COMMON_TRAINING,
+
+  build:
+    buildTrainingRecommendations,
+
+  update:
+    updateAnalysisTraining,
+
+  render:
+    renderTrainingRecommendations,
+
+  getForReport:
+    getTrainingForReport,
+
+  getWeaknessExercises,
+
+  getWeakestArea
+
+};
+
+
+
+/* =========================================================
+   28. INITIALIZE
+========================================================= */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    ensureTrainingPanel();
+
+    startTrainingRefresh();
+
+  }
+);
+
 
 
 if (
-  document.readyState ===
+  document.readyState !==
   "loading"
 ) {
 
-  document.addEventListener(
-    "DOMContentLoaded",
-    bootSportsModule
-  );
+  ensureTrainingPanel();
 
-}
-
-else {
-
-  bootSportsModule();
+  startTrainingRefresh();
 
 }
 
 
-/* ============================================================
-   END SPORTS.JS
-============================================================ */
+console.log(
+  "SEOLCHEON SMART TRAINING ENGINE READY"
+);
+
+
+/* =========================================================
+   END OF TRAINING.JS
+========================================================= */
